@@ -1,0 +1,24 @@
+{
+  "pack": "Unity Project Skeleton Pack v1",
+  "project": "Nightmare Park, Monster Royale",
+  "files": [
+    "docs/unity_project_skeleton_pack_v1_readme.md",
+    "docs/testing_the_actual_game_properly.md",
+    "docs/unity_first_real_test_plan.md",
+    "docs/github_pages_webgl_plan.md",
+    "tasks/task_014_unity_project_skeleton_pack.md",
+    "tasks/task_015_first_unity_open_test.md",
+    "tasks/task_016_first_webgl_build.md",
+    "unity/Assets/Scenes/ArenaOne_Test_SETUP.md",
+    "unity/Assets/UI/BattleHud_SETUP.md",
+    "unity/Assets/Scripts/Input/BattleInput.cs",
+    "unity/Assets/Scripts/Camera/PortraitCameraFit.cs",
+    "unity/Assets/Scripts/Deployment/DeploymentController_TouchReady.cs",
+    "unity/Assets/Scripts/UI/CardSelectionFeedback.cs",
+    "unity/Assets/Scripts/UI/ResultPanelController.cs",
+    "unity/Assets/Scripts/Testing/VerticalSliceTestHarness.cs",
+    "unity/Assets/ScriptableObjects/Units/GraveGoblinStats_SETUP.md",
+    "unity/Assets/Prefabs/Units/PF_GraveGoblin_SETUP.md",
+    "unity/Assets/Prefabs/Arena/ArenaOne_SETUP.md"
+  ]
+}
