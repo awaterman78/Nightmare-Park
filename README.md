@@ -1,42 +1,30 @@
-# Nightmare Park, Monster Royale
+# Nightmare Park v6 Test Build
 
-A haunted real time 1 vs 1 monster card battler.
+Clean browser test build for iPhone testing.
 
-## Current direction
+## What is included
 
-Select a monster card, place it anywhere in your half of Arena One, then watch the monster move, target and fight automatically.
+- Arena One background.
+- One playable Grave Goblin card.
+- Place anywhere in your half.
+- Enemy auto spawns goblins.
+- Towers and cores.
+- Energy bar.
+- Win and lose state.
+- Cleaner UI than the earlier prototype.
 
-The first vertical slice is deliberately narrow:
+## How to test
 
-**Arena One + Grave Goblin + one playable deployment loop.**
-
-No extra menus. No fake depth. No haunted spreadsheet nonsense.
-
-## First milestone
-
-### Vertical Slice 001, Grave Goblin in Arena One
-
-The test is successful when:
-
-1. Grave Goblin can be deployed anywhere in the player's half.
-2. Grave Goblin moves like a goblin, low, twitchy, quick and alive.
-3. Grave Goblin targets enemies and structures clearly.
-4. Bone Stab has anticipation, lunge, impact, recoil and readable damage.
-5. The haunted arena and UI feel premium enough to build on.
-6. The whole thing works in portrait mobile format.
-
-## Repository structure
+Open `index.html` in a browser or upload this folder to:
 
 ```text
-docs/              Game design, arena, combat and animation specs.
-tasks/             Sprint task breakdowns.
-art_direction/     Approved reference art and mockups.
-unity/             Unity project folder and implementation notes.
-blender/           Character modelling, rigging, animation and export pipeline.
-prototypes/        Browser prototypes used only for testing direction.
-builds/            Output builds, not source of truth.
+prototypes/browser_v6_test_build/
 ```
 
-## Current priority
+Then visit:
 
-Start with the Grave Goblin. Get one unit feeling incredible before adding more monsters.
+```text
+https://awaterman78.github.io/Nightmare-Park/prototypes/browser_v6_test_build/
+```
+
+This is still a browser feel test, not the final Unity build.
