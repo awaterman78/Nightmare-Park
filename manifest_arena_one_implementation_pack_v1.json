@@ -1,0 +1,23 @@
+{
+  "pack": "Arena One Implementation Pack v1",
+  "project": "Nightmare Park, Monster Royale",
+  "priority": "Make Arena One behave like a proper battle arena",
+  "files": [
+    "docs/arena_one_implementation_pack_v1_readme.md",
+    "docs/arena_one_scene_spec_v1.md",
+    "docs/arena_one_coordinates_v1.md",
+    "docs/arena_one_pathing_spec_v1.md",
+    "docs/arena_one_battle_ui_spec_v1.md",
+    "tasks/task_011_arena_one_implementation_pack.md",
+    "tasks/task_012_create_arena_one_test_scene.md",
+    "tasks/task_013_arena_one_deployment_test.md",
+    "unity/Assets/Scripts/Arena/ArenaConfig.cs",
+    "unity/Assets/Scripts/Arena/ArenaReferences.cs",
+    "unity/Assets/Scripts/Arena/ArenaPathRouter.cs",
+    "unity/Assets/Scripts/Arena/PlacementValidator.cs",
+    "unity/Assets/Scripts/Arena/DeploymentAreaVisual.cs",
+    "unity/Assets/Scripts/Arena/ArenaGizmos.cs",
+    "unity/Assets/Scripts/Arena/ArenaBootstrapNotes.cs",
+    "unity/Assets/Scripts/Deployment/DeploymentController_ArenaOneVersion.cs"
+  ]
+}
