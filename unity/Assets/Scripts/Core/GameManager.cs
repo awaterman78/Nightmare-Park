@@ -8,30 +8,30 @@ namespace NightmarePark
         public Health PlayerCore;
         public Health EnemyCore;
 
-        public GamePhase Phase { get; private set; } = GamePhase.Playing;
+        private bool matchEnded;
 
         private void Start()
         {
-            if (PlayerCore != null) PlayerCore.Died += HandleCoreDeath;
-            if (EnemyCore != null) EnemyCore.Died += HandleCoreDeath;
+            if (PlayerCore != null) PlayerCore.OnDied += HandleCoreDeath;
+            if (EnemyCore != null) EnemyCore.OnDied += HandleCoreDeath;
         }
 
         private void HandleCoreDeath(Health core)
         {
-            if (Phase != GamePhase.Playing) return;
+            if (matchEnded) return;
+
+            matchEnded = true;
 
             if (core == EnemyCore)
             {
-                Phase = GamePhase.Victory;
                 Debug.Log("Victory");
             }
             else if (core == PlayerCore)
             {
-                Phase = GamePhase.Defeat;
                 Debug.Log("Defeat");
             }
 
-            // TODO, show result UI.
+            // TODO, show result screen.
         }
 
         public void Restart()

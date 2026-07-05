@@ -6,33 +6,28 @@ namespace NightmarePark
     public class EnergySystem : MonoBehaviour
     {
         public float MaxEnergy = 10f;
-        public float StartingEnergy = 5f;
+        public float CurrentEnergy = 5f;
         public float RechargeRate = 1f;
 
-        public float CurrentEnergy { get; private set; }
-
-        public event Action<float, float> EnergyChanged;
-
-        private void Awake()
-        {
-            CurrentEnergy = StartingEnergy;
-            EnergyChanged?.Invoke(CurrentEnergy, MaxEnergy);
-        }
+        public event Action<float, float> OnEnergyChanged;
 
         private void Update()
         {
-            if (CurrentEnergy >= MaxEnergy) return;
-
             CurrentEnergy = Mathf.Min(MaxEnergy, CurrentEnergy + RechargeRate * Time.deltaTime);
-            EnergyChanged?.Invoke(CurrentEnergy, MaxEnergy);
+            OnEnergyChanged?.Invoke(CurrentEnergy, MaxEnergy);
         }
 
-        public bool TrySpend(float amount)
+        public bool CanSpend(float cost)
         {
-            if (CurrentEnergy < amount) return false;
+            return CurrentEnergy >= cost;
+        }
 
-            CurrentEnergy -= amount;
-            EnergyChanged?.Invoke(CurrentEnergy, MaxEnergy);
+        public bool TrySpend(float cost)
+        {
+            if (!CanSpend(cost)) return false;
+
+            CurrentEnergy -= cost;
+            OnEnergyChanged?.Invoke(CurrentEnergy, MaxEnergy);
             return true;
         }
     }

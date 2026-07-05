@@ -1,60 +1,77 @@
 using UnityEngine;
 
-public class DeploymentController : MonoBehaviour
+namespace NightmarePark
 {
-    public Camera mainCamera;
-    public EnergySystem energySystem;
-    public GameObject graveGoblinPrefab;
-    public int graveGoblinCost = 2;
-
-    [Header("World-space deployment bounds")]
-    public float minX = -4f;
-    public float maxX = 4f;
-    public float minZ = -6f;
-    public float maxZ = -0.5f;
-
-    private bool graveGoblinSelected;
-
-    public void SelectGraveGoblin()
+    public class DeploymentController : MonoBehaviour
     {
-        graveGoblinSelected = true;
-    }
+        public Camera MainCamera;
+        public EnergySystem EnergySystem;
+        public GameObject GraveGoblinPrefab;
+        public UnitStats GraveGoblinStats;
 
-    private void Update()
-    {
-        if (!graveGoblinSelected) return;
+        [Header("Player deployment bounds")]
+        public float MinX = -4f;
+        public float MaxX = 4f;
+        public float MinZ = -6f;
+        public float MaxZ = -0.6f;
 
-        if (Input.GetMouseButtonDown(0))
+        private bool graveGoblinSelected;
+
+        public void SelectGraveGoblin()
         {
-            TryDeploy(Input.mousePosition);
+            graveGoblinSelected = true;
+            // TODO, show valid deployment overlay.
         }
-    }
 
-    private void TryDeploy(Vector3 screenPosition)
-    {
-        Ray ray = mainCamera.ScreenPointToRay(screenPosition);
-
-        if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+        private void Update()
         {
+            if (!graveGoblinSelected) return;
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                TryDeploy(Input.mousePosition);
+            }
+        }
+
+        private void TryDeploy(Vector3 screenPosition)
+        {
+            Ray ray = MainCamera.ScreenPointToRay(screenPosition);
+
+            if (!Physics.Raycast(ray, out RaycastHit hit, 100f))
+            {
+                return;
+            }
+
             Vector3 point = hit.point;
 
             if (!IsInPlayerHalf(point))
             {
+                // TODO, invalid placement feedback.
                 return;
             }
 
-            if (!energySystem.TrySpend(graveGoblinCost))
+            if (!EnergySystem.TrySpend(GraveGoblinStats.EnergyCost))
             {
+                // TODO, not enough energy feedback.
                 return;
             }
 
-            Instantiate(graveGoblinPrefab, point, Quaternion.identity);
-            graveGoblinSelected = false;
-        }
-    }
+            GameObject unit = Instantiate(GraveGoblinPrefab, point, Quaternion.identity);
+            UnitController controller = unit.GetComponent<UnitController>();
 
-    private bool IsInPlayerHalf(Vector3 point)
-    {
-        return point.x >= minX && point.x <= maxX && point.z >= minZ && point.z <= maxZ;
+            if (controller != null)
+            {
+                controller.Team = Team.Player;
+                controller.Stats = GraveGoblinStats;
+            }
+
+            graveGoblinSelected = false;
+            // TODO, hide deployment overlay.
+        }
+
+        private bool IsInPlayerHalf(Vector3 point)
+        {
+            return point.x >= MinX && point.x <= MaxX && point.z >= MinZ && point.z <= MaxZ;
+        }
     }
 }

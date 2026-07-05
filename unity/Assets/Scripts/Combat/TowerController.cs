@@ -2,8 +2,6 @@ using UnityEngine;
 
 namespace NightmarePark
 {
-    [RequireComponent(typeof(Health))]
-    [RequireComponent(typeof(Targetable))]
     public class TowerController : MonoBehaviour
     {
         public Team Team;
@@ -11,34 +9,43 @@ namespace NightmarePark
         public float Damage = 62f;
         public float FireRate = 0.9f;
 
-        [Header("Optional")]
-        public Transform FirePoint;
-        public GameObject ProjectilePrefab;
-
         private float cooldown;
-        private Health health;
-
-        private void Awake()
-        {
-            health = GetComponent<Health>();
-            health.Team = Team;
-        }
 
         private void Update()
         {
-            if (health.IsDead) return;
-
             cooldown -= Time.deltaTime;
             if (cooldown > 0f) return;
 
-            Targetable target = TargetingService.Instance.FindNearestEnemy(transform.position, Team, Range);
+            Health target = FindTarget();
             if (target == null) return;
 
             cooldown = FireRate;
-            target.Health.TakeDamage(Damage);
+            target.TakeDamage(Damage);
 
-            // First slice can use instant damage.
-            // Later, replace with projectile travel and hit VFX.
+            // TODO, trigger tower projectile, hit VFX and audio.
+        }
+
+        private Health FindTarget()
+        {
+            Health[] allHealth = FindObjectsOfType<Health>();
+            Health best = null;
+            float bestDistance = float.MaxValue;
+
+            foreach (Health health in allHealth)
+            {
+                if (health.Team == Team) continue;
+                if (health.CurrentHealth <= 0f) continue;
+
+                float distance = Vector3.Distance(transform.position, health.transform.position);
+
+                if (distance <= Range && distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = health;
+                }
+            }
+
+            return best;
         }
     }
 }

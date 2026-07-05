@@ -8,7 +8,7 @@ namespace NightmarePark
         public UnitStats Stats;
         public Animator Animator;
 
-        private Targetable currentTarget;
+        private Transform target;
         private float cooldown;
         private bool firstHit = true;
 
@@ -26,39 +26,28 @@ namespace NightmarePark
 
             cooldown -= Time.deltaTime;
 
-            currentTarget = TargetingService.Instance.FindNearestEnemy(transform.position, Unit.Team);
+            target = TargetingUtility.FindNearestTarget(transform.position, Unit.Team);
+            if (target == null) return;
 
-            if (currentTarget == null) return;
-
-            float distance = Vector3.Distance(transform.position, currentTarget.transform.position);
+            float distance = Vector3.Distance(transform.position, target.position);
             if (distance > Stats.AttackRange) return;
 
             if (cooldown <= 0f)
             {
                 cooldown = Stats.AttackRate;
-
-                if (Animator != null)
-                {
-                    Animator.SetTrigger(BoneStab);
-                }
-                else
-                {
-                    ApplyDamage();
-                }
+                if (Animator != null) Animator.SetTrigger(BoneStab);
             }
         }
 
-        // Hook this to the impact frame in the GG_Bone_Stab animation.
+        // Call this from the Bone Stab animation event at the impact frame.
         public void AnimEvent_BoneStabImpact()
         {
-            ApplyDamage();
-        }
+            if (target == null || Stats == null) return;
 
-        private void ApplyDamage()
-        {
-            if (currentTarget == null || currentTarget.Health == null) return;
+            Health targetHealth = target.GetComponent<Health>();
+            if (targetHealth == null) return;
 
-            float damage = Stats.Damage;
+            float damage = Stats.AttackDamage;
 
             if (firstHit)
             {
@@ -66,7 +55,7 @@ namespace NightmarePark
                 firstHit = false;
             }
 
-            currentTarget.Health.TakeDamage(damage);
+            targetHealth.TakeDamage(damage);
         }
     }
 }

@@ -2,126 +2,106 @@ using UnityEngine;
 
 namespace NightmarePark
 {
-    [RequireComponent(typeof(Health))]
-    [RequireComponent(typeof(Targetable))]
     public class UnitController : MonoBehaviour
     {
         public Team Team;
         public UnitStats Stats;
-
-        [Header("References")]
         public Animator Animator;
-        public Transform ModelRoot;
+        public Health Health;
 
-        private Health health;
-        private Targetable currentTarget;
-        private bool dead;
+        private Transform target;
+        private bool isDead;
 
         private static readonly int IsMoving = Animator.StringToHash("IsMoving");
         private static readonly int MoveSpeed = Animator.StringToHash("MoveSpeed");
         private static readonly int Hit = Animator.StringToHash("Hit");
         private static readonly int Death = Animator.StringToHash("Death");
-        private static readonly int SpawnLeap = Animator.StringToHash("SpawnLeap");
 
         private void Awake()
         {
-            health = GetComponent<Health>();
-            health.Team = Team;
+            if (Animator == null) Animator = GetComponentInChildren<Animator>();
+            if (Health == null) Health = GetComponent<Health>();
 
-            if (Stats != null)
+            if (Health != null)
             {
-                health.SetMaxHealth(Stats.MaxHealth);
-            }
-
-            health.Damaged += OnDamaged;
-            health.Died += OnDied;
-
-            if (Animator == null)
-            {
-                Animator = GetComponentInChildren<Animator>();
-            }
-        }
-
-        private void Start()
-        {
-            if (Animator != null)
-            {
-                Animator.SetTrigger(SpawnLeap);
+                Health.Team = Team;
+                Health.MaxHealth = Stats != null ? Stats.MaxHealth : Health.MaxHealth;
+                Health.CurrentHealth = Health.MaxHealth;
+                Health.OnDamaged += HandleDamaged;
+                Health.OnDied += HandleDeath;
             }
         }
 
         private void Update()
         {
-            if (dead || Stats == null) return;
+            if (isDead) return;
 
-            currentTarget = TargetingService.Instance.FindNearestEnemy(transform.position, Team);
+            target = TargetingUtility.FindNearestTarget(transform.position, Team);
 
-            if (currentTarget == null)
+            if (target == null)
             {
                 SetMoving(false);
                 return;
             }
 
-            float distance = Vector3.Distance(transform.position, currentTarget.transform.position);
+            float distance = Vector3.Distance(transform.position, target.position);
 
-            if (distance <= Stats.AttackRange)
+            if (distance > Stats.AttackRange)
+            {
+                MoveTowards(target.position);
+            }
+            else
             {
                 SetMoving(false);
-                return;
             }
-
-            MoveTowards(currentTarget.transform.position);
         }
 
-        private void MoveTowards(Vector3 finalDestination)
+        private void MoveTowards(Vector3 destination)
         {
-            Vector3 nextPoint = ArenaPathing.Instance != null
-                ? ArenaPathing.Instance.GetNextPathPoint(transform.position, finalDestination, Team)
-                : finalDestination;
-
-            Vector3 direction = nextPoint - transform.position;
-            direction.y = 0f;
-
-            if (direction.sqrMagnitude < 0.01f)
-            {
-                SetMoving(false);
-                return;
-            }
-
             SetMoving(true);
 
-            Vector3 move = direction.normalized * Stats.MoveSpeed * Time.deltaTime;
-            transform.position += move;
+            Vector3 direction = destination - transform.position;
+            direction.y = 0f;
 
-            Quaternion look = Quaternion.LookRotation(direction.normalized);
-            transform.rotation = Quaternion.Slerp(transform.rotation, look, Time.deltaTime * Stats.TurnSpeed);
+            if (direction.sqrMagnitude < 0.001f) return;
+
+            Vector3 movement = direction.normalized * Stats.MoveSpeed * Time.deltaTime;
+            transform.position += movement;
+
+            Quaternion lookRotation = Quaternion.LookRotation(direction.normalized);
+            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 12f);
+
+            if (Animator != null)
+            {
+                Animator.SetFloat(MoveSpeed, Stats.MoveSpeed);
+            }
         }
 
         private void SetMoving(bool moving)
         {
-            if (Animator == null) return;
-
-            Animator.SetBool(IsMoving, moving);
-            Animator.SetFloat(MoveSpeed, moving ? Stats.MoveSpeed : 0f);
+            if (Animator != null)
+            {
+                Animator.SetBool(IsMoving, moving);
+            }
         }
 
-        private void OnDamaged(Health h, float amount)
+        private void HandleDamaged(float amount)
         {
-            if (dead) return;
+            if (isDead) return;
             if (Animator != null) Animator.SetTrigger(Hit);
         }
 
-        private void OnDied(Health h)
+        private void HandleDeath(Health deadHealth)
         {
-            dead = true;
+            isDead = true;
             SetMoving(false);
-
-            Collider col = GetComponent<Collider>();
-            if (col != null) col.enabled = false;
 
             if (Animator != null) Animator.SetTrigger(Death);
 
-            Destroy(gameObject, 1.25f);
+            Collider collider = GetComponent<Collider>();
+            if (collider != null) collider.enabled = false;
+
+            Destroy(gameObject, 1.2f);
         }
     }
 }
