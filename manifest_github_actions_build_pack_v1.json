@@ -1,0 +1,14 @@
+{
+  "pack": "GitHub Actions Build Pack v1",
+  "project": "Nightmare Park, Monster Royale",
+  "purpose": "Get visible build logs and deploy browser prototype",
+  "files": [
+    "docs/github_actions_build_pack_v1_readme.md",
+    "docs/github_actions_setup_steps.md",
+    "docs/unity_github_actions_notes.md",
+    "docs/build_troubleshooting_checklist.md",
+    "tasks/task_033_github_actions_build_pack.md",
+    ".github/workflows/deploy-browser-prototype.yml",
+    ".github/workflows/unity-webgl-diagnostic-build.yml"
+  ]
+}

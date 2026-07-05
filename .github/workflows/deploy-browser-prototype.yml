@@ -1,0 +1,57 @@
+name: Deploy Browser Prototype
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'prototypes/browser_v7_test_build/**'
+      - '.github/workflows/deploy-browser-prototype.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare Pages folder
+        run: |
+          mkdir -p public
+          if [ -f "prototypes/browser_v7_test_build/index.html" ]; then
+            cp -R prototypes/browser_v7_test_build/* public/
+          elif [ -f "prototypes/browser_v6_test_build/index.html" ]; then
+            cp -R prototypes/browser_v6_test_build/* public/
+          elif [ -f "prototypes/browser_v5_2/index.html" ]; then
+            cp -R prototypes/browser_v5_2/* public/
+          else
+            echo "<h1>Nightmare Park</h1><p>No browser prototype found yet.</p>" > public/index.html
+          fi
+          touch public/.nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

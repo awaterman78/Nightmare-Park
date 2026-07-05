@@ -1,0 +1,83 @@
+name: Unity WebGL Diagnostic Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  diagnostics:
+    name: Repo Diagnostics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show repo structure
+        run: |
+          echo "Root:"
+          ls -la
+          echo ""
+          echo "Unity folder:"
+          ls -la unity || true
+          echo ""
+          echo "Unity Assets:"
+          ls -la unity/Assets || true
+          echo ""
+          echo "Unity Packages:"
+          ls -la unity/Packages || true
+          echo ""
+          echo "Unity ProjectSettings:"
+          ls -la unity/ProjectSettings || true
+
+      - name: Check required Unity files
+        run: |
+          test -d unity/Assets
+          test -f unity/Packages/manifest.json
+          test -f unity/ProjectSettings/ProjectVersion.txt
+          echo "Basic Unity project files found."
+
+  unity-build:
+    name: Unity WebGL Build Attempt
+    needs: diagnostics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: unity/Library
+          key: Library-WebGL-${{ hashFiles('unity/Assets/**', 'unity/Packages/**', 'unity/ProjectSettings/**') }}
+          restore-keys: |
+            Library-WebGL-
+
+      - name: Build WebGL with GameCI
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: unity
+          targetPlatform: WebGL
+          buildsPath: builds
+          buildName: NightmareParkWebGL
+          unityVersion: 6000.0.0f1
+          allowDirtyBuild: true
+          customParameters: -executeMethod NightmarePark.Editor.NightmareParkCloudBuildBootstrap.PerformWebGLBuild
+
+      - name: Upload WebGL build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NightmarePark-WebGL-build-output
+          path: builds
+          if-no-files-found: warn
