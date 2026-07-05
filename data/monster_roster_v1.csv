@@ -1,0 +1,13 @@
+id,displayName,rarity,energyCost,role,movementStyle,signatureSkill,targeting,health,damage,attackRate,attackRange,moveSpeed,deploymentCount,specialRule,buildPriority
+grave_goblin,Grave Goblin,Common,2,Fast melee pressure,Quick Scuttle,Bone Stab,Ground units and buildings,260,52,0.72,0.8,3.8,1,First attack deals bonus damage.,1
+candle_imp,Candle Imp,Common,2,Cheap ranged attacker,Hopping Dash,Fire Spit,Ground and air,140,34,0.95,3.2,2.9,1,Light splash on fire spit impact.,2
+tin_bat,Tin Bat,Common,2,Flying swarm,Flutter Swarm,Dive Peck,Ground and air,80,18,0.55,0.55,4.2,3,Flying swarm of three.,4
+coffin_guard,Coffin Guard,Common,3,Mini tank,Heavy Shuffle,Lid Block,Ground units and buildings,780,38,1.1,0.8,1.8,1,Brief damage reduction after deployment.,5
+bone_archer,Bone Archer,Common,3,Ranged single target,Cautious Step,Bone Shot,Ground and air,180,48,0.9,4.0,2.2,1,Reliable long range bone arrows.,3
+zombie_runner,Zombie Runner,Rare,3,Fast assassin,Sprint Lunge,Infected Bite,Ground units and buildings,240,44,0.62,0.75,4.4,1,First bite applies short damage over time.,6
+mirror_clown,Mirror Clown,Rare,4,Control,Jittery Sidestep,Mirror Stun,Ground units,420,30,1.05,2.2,2.6,1,Periodically stuns nearest enemy.,7
+venom_widow,Venom Widow,Rare,4,Poison control,Wall-Creep Skitter,Venom Bite,Ground units,310,26,0.72,1.0,3.1,1,Applies poison over time.,10
+bone_brute,Bone Brute,Epic,5,Tank,Heavy Stomp,Skull Smash,Ground units and buildings,1450,92,1.35,0.9,1.55,1,Heavy attack damages and knocks back nearby enemies.,8
+phantom_bride,Phantom Bride,Epic,5,Support,Ghost Glide,Healing Wail,Allies,360,0,1.8,3.0,2.5,1,Pulses healing to nearby allies.,9
+werewolf_king,Werewolf King,Legendary,6,Bruiser,Savage Charge,Moon Rage,Ground units and buildings,980,105,0.85,0.9,3.2,1,Gains speed and attack rate after taking damage.,12
+cursed_lightning,Cursed Lightning,Epic,4,Spell,Spell Strike,Chain Zap,Targeted area,0,180,0,0,0,0,Chains to nearby enemies with reduced damage.,11
