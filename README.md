@@ -1,30 +1,30 @@
-# Nightmare Park v6 Test Build
+# Nightmare Park v7 Test Build
 
-Clean browser test build for iPhone testing.
+Playable browser test build for iPhone.
 
-## What is included
+## Improvements from v6
 
-- Arena One background.
-- One playable Grave Goblin card.
-- Place anywhere in your half.
-- Enemy auto spawns goblins.
-- Towers and cores.
-- Energy bar.
-- Win and lose state.
-- Cleaner UI than the earlier prototype.
+- Cleaner battle UI polish.
+- Better card selection feedback.
+- Battle start and double energy phase badges.
+- Improved placement feedback.
+- Better tactical readability.
+- Still focused on one thing, Grave Goblin in Arena One.
 
-## How to test
+## Upload path
 
-Open `index.html` in a browser or upload this folder to:
+Upload this folder to:
 
 ```text
-prototypes/browser_v6_test_build/
+prototypes/browser_v7_test_build/
 ```
 
-Then visit:
+Then test:
 
 ```text
-https://awaterman78.github.io/Nightmare-Park/prototypes/browser_v6_test_build/
+https://awaterman78.github.io/Nightmare-Park/prototypes/browser_v7_test_build/
 ```
 
-This is still a browser feel test, not the final Unity build.
+## Reminder
+
+This is still a browser prototype, not the final Unity game.
