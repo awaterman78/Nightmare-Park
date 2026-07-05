@@ -1,46 +1,51 @@
 using UnityEngine;
 
-public class TowerController : MonoBehaviour
+namespace NightmarePark
 {
-    public UnitController.Team team;
-    public float range = 4f;
-    public float damage = 62f;
-    public float fireRate = 0.9f;
-
-    private float cooldown;
-
-    private void Update()
+    public class TowerController : MonoBehaviour
     {
-        cooldown -= Time.deltaTime;
-        if (cooldown > 0f) return;
+        public Team Team;
+        public float Range = 4f;
+        public float Damage = 62f;
+        public float FireRate = 0.9f;
 
-        Health target = FindTarget();
-        if (target == null) return;
+        private float cooldown;
 
-        cooldown = fireRate;
-        target.TakeDamage(damage);
-
-        // TODO, trigger projectile VFX and tower animation.
-    }
-
-    private Health FindTarget()
-    {
-        Health[] all = FindObjectsOfType<Health>();
-        Health best = null;
-        float bestDistance = float.MaxValue;
-
-        foreach (var h in all)
+        private void Update()
         {
-            if (h.team == team) continue;
+            cooldown -= Time.deltaTime;
+            if (cooldown > 0f) return;
 
-            float d = Vector3.Distance(transform.position, h.transform.position);
-            if (d <= range && d < bestDistance)
-            {
-                bestDistance = d;
-                best = h;
-            }
+            Health target = FindTarget();
+            if (target == null) return;
+
+            cooldown = FireRate;
+            target.TakeDamage(Damage);
+
+            // TODO, trigger tower projectile, hit VFX and audio.
         }
 
-        return best;
+        private Health FindTarget()
+        {
+            Health[] allHealth = FindObjectsOfType<Health>();
+            Health best = null;
+            float bestDistance = float.MaxValue;
+
+            foreach (Health health in allHealth)
+            {
+                if (health.Team == Team) continue;
+                if (health.CurrentHealth <= 0f) continue;
+
+                float distance = Vector3.Distance(transform.position, health.transform.position);
+
+                if (distance <= Range && distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = health;
+                }
+            }
+
+            return best;
+        }
     }
 }

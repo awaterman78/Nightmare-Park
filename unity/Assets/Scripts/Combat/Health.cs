@@ -1,30 +1,39 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
-public class Health : MonoBehaviour
+namespace NightmarePark
 {
-    public UnitController.Team team;
-    public float maxHealth = 260f;
-    public float currentHealth;
-
-    public event Action<float, float> OnHealthChanged;
-    public event Action OnDied;
-
-    private void Awake()
+    public class Health : MonoBehaviour
     {
-        currentHealth = maxHealth;
-        OnHealthChanged?.Invoke(currentHealth, maxHealth);
-    }
+        public Team Team;
+        public float MaxHealth = 260f;
+        public float CurrentHealth;
 
-    public void TakeDamage(float damage)
-    {
-        currentHealth = Mathf.Max(0f, currentHealth - damage);
-        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        public event Action<float, float> OnHealthChanged;
+        public event Action<Health> OnDied;
+        public event Action<float> OnDamaged;
 
-        if (currentHealth <= 0f)
+        private bool isDead;
+
+        private void Awake()
         {
-            OnDied?.Invoke();
-            Destroy(gameObject);
+            CurrentHealth = MaxHealth;
+            OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
+        }
+
+        public void TakeDamage(float amount)
+        {
+            if (isDead) return;
+
+            CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+            OnDamaged?.Invoke(amount);
+            OnHealthChanged?.Invoke(CurrentHealth, MaxHealth);
+
+            if (CurrentHealth <= 0f)
+            {
+                isDead = true;
+                OnDied?.Invoke(this);
+            }
         }
     }
 }

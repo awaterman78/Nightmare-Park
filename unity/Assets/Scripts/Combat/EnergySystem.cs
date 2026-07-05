@@ -1,26 +1,34 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
-public class EnergySystem : MonoBehaviour
+namespace NightmarePark
 {
-    public float maxEnergy = 10f;
-    public float currentEnergy = 5f;
-    public float rechargeRate = 1f;
-
-    public event Action<float, float> OnEnergyChanged;
-
-    private void Update()
+    public class EnergySystem : MonoBehaviour
     {
-        currentEnergy = Mathf.Min(maxEnergy, currentEnergy + rechargeRate * Time.deltaTime);
-        OnEnergyChanged?.Invoke(currentEnergy, maxEnergy);
-    }
+        public float MaxEnergy = 10f;
+        public float CurrentEnergy = 5f;
+        public float RechargeRate = 1f;
 
-    public bool TrySpend(float amount)
-    {
-        if (currentEnergy < amount) return false;
+        public event Action<float, float> OnEnergyChanged;
 
-        currentEnergy -= amount;
-        OnEnergyChanged?.Invoke(currentEnergy, maxEnergy);
-        return true;
+        private void Update()
+        {
+            CurrentEnergy = Mathf.Min(MaxEnergy, CurrentEnergy + RechargeRate * Time.deltaTime);
+            OnEnergyChanged?.Invoke(CurrentEnergy, MaxEnergy);
+        }
+
+        public bool CanSpend(float cost)
+        {
+            return CurrentEnergy >= cost;
+        }
+
+        public bool TrySpend(float cost)
+        {
+            if (!CanSpend(cost)) return false;
+
+            CurrentEnergy -= cost;
+            OnEnergyChanged?.Invoke(CurrentEnergy, MaxEnergy);
+            return true;
+        }
     }
 }
