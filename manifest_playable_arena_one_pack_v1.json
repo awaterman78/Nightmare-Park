@@ -1,0 +1,12 @@
+{
+  "pack": "Unity Cloud Playable Arena One Pack v1",
+  "project": "Nightmare Park, Monster Royale",
+  "purpose": "First playable Unity WebGL vertical slice",
+  "files": [
+    "README_PLAYABLE_ARENA_ONE_PACK_V1.md",
+    "tasks/task_037_unity_playable_arena_one.md",
+    "unity_cloud_minimal/Assets/Scripts/NightmareParkPlayableGame.cs",
+    "unity_cloud_minimal/Assets/Editor/CloudBuildAutoSceneSetup.cs",
+    "unity_cloud_minimal/Assets/Editor/WebGLPagesFriendlySettings.cs"
+  ]
+}
