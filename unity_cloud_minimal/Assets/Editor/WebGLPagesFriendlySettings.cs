@@ -27,11 +27,11 @@ namespace NightmarePark.Editor
                 PlayerSettings.companyName = "Nightmare Park";
                 PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
                 PlayerSettings.WebGL.dataCaching = false;
-                Debug.Log("Nightmare Park: WebGL v3 settings applied.");
+                Debug.Log("Nightmare Park: WebGL Visual Slice v4 settings applied.");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError("Nightmare Park: Failed to apply WebGL v3 settings: " + ex);
+                Debug.LogError("Nightmare Park: Failed to apply WebGL Visual Slice v4 settings: " + ex);
             }
         }
     }

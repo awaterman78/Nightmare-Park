@@ -11,7 +11,7 @@ namespace NightmarePark.Editor
     [InitializeOnLoad]
     public static class CloudBuildAutoSceneSetup
     {
-        private const string ScenePath = "Assets/Scenes/ArenaOne_Playable_v3.unity";
+        private const string ScenePath = "Assets/Scenes/ArenaOne_VisualSlice_v4.unity";
         private static bool hasRun;
 
         static CloudBuildAutoSceneSetup()
@@ -38,7 +38,7 @@ namespace NightmarePark.Editor
 
                 Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-                GameObject controller = new GameObject("Arena One Playable Controller");
+                GameObject controller = new GameObject("Nightmare Park Arena One Visual Slice v4");
                 controller.AddComponent<NightmareParkArenaOneController>();
 
                 EditorSceneManager.SaveScene(scene, ScenePath);
@@ -51,11 +51,11 @@ namespace NightmarePark.Editor
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
 
-                Debug.Log("Nightmare Park: Arena One playable v3 scene created with lane-button deployment and added to Build Settings.");
+                Debug.Log("Nightmare Park: Arena One Visual Slice v4 created and added to Build Settings.");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError("Nightmare Park: Arena One v3 scene setup failed: " + ex);
+                Debug.LogError("Nightmare Park: Visual Slice v4 scene setup failed: " + ex);
             }
         }
     }
