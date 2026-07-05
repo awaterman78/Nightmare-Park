@@ -1,0 +1,12 @@
+{
+  "pack": "Unity Cloud Playable Arena One Pack v3",
+  "project": "Nightmare Park, Monster Royale",
+  "purpose": "Fix deployment using reliable lane UI buttons",
+  "files": [
+    "README_PLAYABLE_ARENA_ONE_PACK_V3.md",
+    "tasks/task_039_unity_playable_arena_one_v3_lane_deploy.md",
+    "unity_cloud_minimal/Assets/Scripts/NightmareParkArenaOneController.cs",
+    "unity_cloud_minimal/Assets/Editor/CloudBuildAutoSceneSetup.cs",
+    "unity_cloud_minimal/Assets/Editor/WebGLPagesFriendlySettings.cs"
+  ]
+}
