@@ -1,46 +1,44 @@
 using UnityEngine;
 
-public class TowerController : MonoBehaviour
+namespace NightmarePark
 {
-    public UnitController.Team team;
-    public float range = 4f;
-    public float damage = 62f;
-    public float fireRate = 0.9f;
-
-    private float cooldown;
-
-    private void Update()
+    [RequireComponent(typeof(Health))]
+    [RequireComponent(typeof(Targetable))]
+    public class TowerController : MonoBehaviour
     {
-        cooldown -= Time.deltaTime;
-        if (cooldown > 0f) return;
+        public Team Team;
+        public float Range = 4f;
+        public float Damage = 62f;
+        public float FireRate = 0.9f;
 
-        Health target = FindTarget();
-        if (target == null) return;
+        [Header("Optional")]
+        public Transform FirePoint;
+        public GameObject ProjectilePrefab;
 
-        cooldown = fireRate;
-        target.TakeDamage(damage);
+        private float cooldown;
+        private Health health;
 
-        // TODO, trigger projectile VFX and tower animation.
-    }
-
-    private Health FindTarget()
-    {
-        Health[] all = FindObjectsOfType<Health>();
-        Health best = null;
-        float bestDistance = float.MaxValue;
-
-        foreach (var h in all)
+        private void Awake()
         {
-            if (h.team == team) continue;
-
-            float d = Vector3.Distance(transform.position, h.transform.position);
-            if (d <= range && d < bestDistance)
-            {
-                bestDistance = d;
-                best = h;
-            }
+            health = GetComponent<Health>();
+            health.Team = Team;
         }
 
-        return best;
+        private void Update()
+        {
+            if (health.IsDead) return;
+
+            cooldown -= Time.deltaTime;
+            if (cooldown > 0f) return;
+
+            Targetable target = TargetingService.Instance.FindNearestEnemy(transform.position, Team, Range);
+            if (target == null) return;
+
+            cooldown = FireRate;
+            target.Health.TakeDamage(Damage);
+
+            // First slice can use instant damage.
+            // Later, replace with projectile travel and hit VFX.
+        }
     }
 }

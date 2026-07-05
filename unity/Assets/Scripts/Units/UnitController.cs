@@ -1,103 +1,127 @@
 using UnityEngine;
 
-public class UnitController : MonoBehaviour
+namespace NightmarePark
 {
-    public enum Team { Player, Enemy }
-
-    public Team team;
-    public float moveSpeed = 3.8f;
-    public float attackRange = 0.8f;
-    public float attackRate = 0.72f;
-    public float attackDamage = 52f;
-    public float firstHitMultiplier = 1.85f;
-
-    private Transform currentTarget;
-    private float attackCooldown;
-    private bool firstHit = true;
-    private Animator animator;
-
-    private void Awake()
+    [RequireComponent(typeof(Health))]
+    [RequireComponent(typeof(Targetable))]
+    public class UnitController : MonoBehaviour
     {
-        animator = GetComponentInChildren<Animator>();
-    }
+        public Team Team;
+        public UnitStats Stats;
 
-    private void Update()
-    {
-        FindTarget();
+        [Header("References")]
+        public Animator Animator;
+        public Transform ModelRoot;
 
-        if (currentTarget == null)
+        private Health health;
+        private Targetable currentTarget;
+        private bool dead;
+
+        private static readonly int IsMoving = Animator.StringToHash("IsMoving");
+        private static readonly int MoveSpeed = Animator.StringToHash("MoveSpeed");
+        private static readonly int Hit = Animator.StringToHash("Hit");
+        private static readonly int Death = Animator.StringToHash("Death");
+        private static readonly int SpawnLeap = Animator.StringToHash("SpawnLeap");
+
+        private void Awake()
         {
-            animator?.SetBool("IsMoving", false);
-            return;
-        }
+            health = GetComponent<Health>();
+            health.Team = Team;
 
-        float distance = Vector3.Distance(transform.position, currentTarget.position);
-
-        if (distance > attackRange)
-        {
-            MoveTowardsTarget();
-        }
-        else
-        {
-            AttackTarget();
-        }
-    }
-
-    private void FindTarget()
-    {
-        // TODO, replace with efficient targeting system.
-        var targets = FindObjectsOfType<Health>();
-        float bestDistance = float.MaxValue;
-        Transform best = null;
-
-        foreach (var target in targets)
-        {
-            if (target.team == team) continue;
-
-            float d = Vector3.Distance(transform.position, target.transform.position);
-            if (d < bestDistance)
+            if (Stats != null)
             {
-                bestDistance = d;
-                best = target.transform;
+                health.SetMaxHealth(Stats.MaxHealth);
+            }
+
+            health.Damaged += OnDamaged;
+            health.Died += OnDied;
+
+            if (Animator == null)
+            {
+                Animator = GetComponentInChildren<Animator>();
             }
         }
 
-        currentTarget = best;
-    }
-
-    private void MoveTowardsTarget()
-    {
-        animator?.SetBool("IsMoving", true);
-        Vector3 direction = (currentTarget.position - transform.position).normalized;
-        transform.position += direction * moveSpeed * Time.deltaTime;
-
-        if (direction.sqrMagnitude > 0.001f)
+        private void Start()
         {
-            transform.forward = Vector3.Lerp(transform.forward, direction, Time.deltaTime * 12f);
-        }
-    }
-
-    private void AttackTarget()
-    {
-        animator?.SetBool("IsMoving", false);
-
-        attackCooldown -= Time.deltaTime;
-        if (attackCooldown > 0f) return;
-
-        attackCooldown = attackRate;
-        animator?.SetTrigger("BoneStab");
-
-        float damage = attackDamage;
-        if (firstHit)
-        {
-            damage *= firstHitMultiplier;
-            firstHit = false;
+            if (Animator != null)
+            {
+                Animator.SetTrigger(SpawnLeap);
+            }
         }
 
-        Health health = currentTarget.GetComponent<Health>();
-        if (health != null)
+        private void Update()
         {
-            health.TakeDamage(damage);
+            if (dead || Stats == null) return;
+
+            currentTarget = TargetingService.Instance.FindNearestEnemy(transform.position, Team);
+
+            if (currentTarget == null)
+            {
+                SetMoving(false);
+                return;
+            }
+
+            float distance = Vector3.Distance(transform.position, currentTarget.transform.position);
+
+            if (distance <= Stats.AttackRange)
+            {
+                SetMoving(false);
+                return;
+            }
+
+            MoveTowards(currentTarget.transform.position);
+        }
+
+        private void MoveTowards(Vector3 finalDestination)
+        {
+            Vector3 nextPoint = ArenaPathing.Instance != null
+                ? ArenaPathing.Instance.GetNextPathPoint(transform.position, finalDestination, Team)
+                : finalDestination;
+
+            Vector3 direction = nextPoint - transform.position;
+            direction.y = 0f;
+
+            if (direction.sqrMagnitude < 0.01f)
+            {
+                SetMoving(false);
+                return;
+            }
+
+            SetMoving(true);
+
+            Vector3 move = direction.normalized * Stats.MoveSpeed * Time.deltaTime;
+            transform.position += move;
+
+            Quaternion look = Quaternion.LookRotation(direction.normalized);
+            transform.rotation = Quaternion.Slerp(transform.rotation, look, Time.deltaTime * Stats.TurnSpeed);
+        }
+
+        private void SetMoving(bool moving)
+        {
+            if (Animator == null) return;
+
+            Animator.SetBool(IsMoving, moving);
+            Animator.SetFloat(MoveSpeed, moving ? Stats.MoveSpeed : 0f);
+        }
+
+        private void OnDamaged(Health h, float amount)
+        {
+            if (dead) return;
+            if (Animator != null) Animator.SetTrigger(Hit);
+        }
+
+        private void OnDied(Health h)
+        {
+            dead = true;
+            SetMoving(false);
+
+            Collider col = GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+
+            if (Animator != null) Animator.SetTrigger(Death);
+
+            Destroy(gameObject, 1.25f);
         }
     }
 }
