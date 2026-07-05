@@ -1,0 +1,12 @@
+{
+  "pack": "Unity Cloud Playable Arena One Pack v2",
+  "project": "Nightmare Park, Monster Royale",
+  "purpose": "Fix blank Unity share player and provide visible-first playable scene",
+  "files": [
+    "README_PLAYABLE_ARENA_ONE_PACK_V2.md",
+    "tasks/task_038_unity_playable_arena_one_v2.md",
+    "unity_cloud_minimal/Assets/Scripts/NightmareParkArenaOneController.cs",
+    "unity_cloud_minimal/Assets/Editor/CloudBuildAutoSceneSetup.cs",
+    "unity_cloud_minimal/Assets/Editor/WebGLPagesFriendlySettings.cs"
+  ]
+}

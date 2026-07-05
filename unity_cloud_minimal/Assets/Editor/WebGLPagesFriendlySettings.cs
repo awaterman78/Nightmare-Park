@@ -14,7 +14,7 @@ namespace NightmarePark.Editor
         }
 
         [InitializeOnLoadMethod]
-        private static void OnEditorLoaded()
+        private static void OnLoad()
         {
             Apply();
         }
@@ -23,13 +23,16 @@ namespace NightmarePark.Editor
         {
             try
             {
+                PlayerSettings.productName = "Nightmare Park Monster Royale";
+                PlayerSettings.companyName = "Nightmare Park";
                 PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
                 PlayerSettings.WebGL.dataCaching = false;
-                Debug.Log("Nightmare Park: WebGL compression disabled for easier static hosting.");
+                PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.FullWithoutStacktrace;
+                Debug.Log("Nightmare Park: WebGL v2 settings applied.");
             }
             catch (System.Exception ex)
             {
-                Debug.LogError("Nightmare Park: Failed to apply WebGL static hosting settings: " + ex);
+                Debug.LogError("Nightmare Park: Failed to apply WebGL v2 settings: " + ex);
             }
         }
     }
