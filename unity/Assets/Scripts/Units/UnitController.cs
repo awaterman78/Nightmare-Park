@@ -1,103 +1,107 @@
 using UnityEngine;
 
-public class UnitController : MonoBehaviour
+namespace NightmarePark
 {
-    public enum Team { Player, Enemy }
-
-    public Team team;
-    public float moveSpeed = 3.8f;
-    public float attackRange = 0.8f;
-    public float attackRate = 0.72f;
-    public float attackDamage = 52f;
-    public float firstHitMultiplier = 1.85f;
-
-    private Transform currentTarget;
-    private float attackCooldown;
-    private bool firstHit = true;
-    private Animator animator;
-
-    private void Awake()
+    public class UnitController : MonoBehaviour
     {
-        animator = GetComponentInChildren<Animator>();
-    }
+        public Team Team;
+        public UnitStats Stats;
+        public Animator Animator;
+        public Health Health;
 
-    private void Update()
-    {
-        FindTarget();
+        private Transform target;
+        private bool isDead;
 
-        if (currentTarget == null)
+        private static readonly int IsMoving = Animator.StringToHash("IsMoving");
+        private static readonly int MoveSpeed = Animator.StringToHash("MoveSpeed");
+        private static readonly int Hit = Animator.StringToHash("Hit");
+        private static readonly int Death = Animator.StringToHash("Death");
+
+        private void Awake()
         {
-            animator?.SetBool("IsMoving", false);
-            return;
-        }
+            if (Animator == null) Animator = GetComponentInChildren<Animator>();
+            if (Health == null) Health = GetComponent<Health>();
 
-        float distance = Vector3.Distance(transform.position, currentTarget.position);
-
-        if (distance > attackRange)
-        {
-            MoveTowardsTarget();
-        }
-        else
-        {
-            AttackTarget();
-        }
-    }
-
-    private void FindTarget()
-    {
-        // TODO, replace with efficient targeting system.
-        var targets = FindObjectsOfType<Health>();
-        float bestDistance = float.MaxValue;
-        Transform best = null;
-
-        foreach (var target in targets)
-        {
-            if (target.team == team) continue;
-
-            float d = Vector3.Distance(transform.position, target.transform.position);
-            if (d < bestDistance)
+            if (Health != null)
             {
-                bestDistance = d;
-                best = target.transform;
+                Health.Team = Team;
+                Health.MaxHealth = Stats != null ? Stats.MaxHealth : Health.MaxHealth;
+                Health.CurrentHealth = Health.MaxHealth;
+                Health.OnDamaged += HandleDamaged;
+                Health.OnDied += HandleDeath;
             }
         }
 
-        currentTarget = best;
-    }
-
-    private void MoveTowardsTarget()
-    {
-        animator?.SetBool("IsMoving", true);
-        Vector3 direction = (currentTarget.position - transform.position).normalized;
-        transform.position += direction * moveSpeed * Time.deltaTime;
-
-        if (direction.sqrMagnitude > 0.001f)
+        private void Update()
         {
-            transform.forward = Vector3.Lerp(transform.forward, direction, Time.deltaTime * 12f);
-        }
-    }
+            if (isDead) return;
 
-    private void AttackTarget()
-    {
-        animator?.SetBool("IsMoving", false);
+            target = TargetingUtility.FindNearestTarget(transform.position, Team);
 
-        attackCooldown -= Time.deltaTime;
-        if (attackCooldown > 0f) return;
+            if (target == null)
+            {
+                SetMoving(false);
+                return;
+            }
 
-        attackCooldown = attackRate;
-        animator?.SetTrigger("BoneStab");
+            float distance = Vector3.Distance(transform.position, target.position);
 
-        float damage = attackDamage;
-        if (firstHit)
-        {
-            damage *= firstHitMultiplier;
-            firstHit = false;
+            if (distance > Stats.AttackRange)
+            {
+                MoveTowards(target.position);
+            }
+            else
+            {
+                SetMoving(false);
+            }
         }
 
-        Health health = currentTarget.GetComponent<Health>();
-        if (health != null)
+        private void MoveTowards(Vector3 destination)
         {
-            health.TakeDamage(damage);
+            SetMoving(true);
+
+            Vector3 direction = destination - transform.position;
+            direction.y = 0f;
+
+            if (direction.sqrMagnitude < 0.001f) return;
+
+            Vector3 movement = direction.normalized * Stats.MoveSpeed * Time.deltaTime;
+            transform.position += movement;
+
+            Quaternion lookRotation = Quaternion.LookRotation(direction.normalized);
+            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * 12f);
+
+            if (Animator != null)
+            {
+                Animator.SetFloat(MoveSpeed, Stats.MoveSpeed);
+            }
+        }
+
+        private void SetMoving(bool moving)
+        {
+            if (Animator != null)
+            {
+                Animator.SetBool(IsMoving, moving);
+            }
+        }
+
+        private void HandleDamaged(float amount)
+        {
+            if (isDead) return;
+            if (Animator != null) Animator.SetTrigger(Hit);
+        }
+
+        private void HandleDeath(Health deadHealth)
+        {
+            isDead = true;
+            SetMoving(false);
+
+            if (Animator != null) Animator.SetTrigger(Death);
+
+            Collider collider = GetComponent<Collider>();
+            if (collider != null) collider.enabled = false;
+
+            Destroy(gameObject, 1.2f);
         }
     }
 }
