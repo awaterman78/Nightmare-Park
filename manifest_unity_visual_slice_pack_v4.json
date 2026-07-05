@@ -1,0 +1,12 @@
+{
+  "pack": "Nightmare Park Unity Visual Slice Pack v4",
+  "project": "Nightmare Park, Monster Royale",
+  "purpose": "Visual upgrade pass for the Unity Cloud playable prototype",
+  "files": [
+    "README_UNITY_VISUAL_SLICE_PACK_V4.md",
+    "tasks/task_040_unity_visual_slice_v4.md",
+    "unity_cloud_minimal/Assets/Scripts/NightmareParkArenaOneController.cs",
+    "unity_cloud_minimal/Assets/Editor/CloudBuildAutoSceneSetup.cs",
+    "unity_cloud_minimal/Assets/Editor/WebGLPagesFriendlySettings.cs"
+  ]
+}
