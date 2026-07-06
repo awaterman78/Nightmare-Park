@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#090914" />
+  <title>Nightmare Park, Monster Royale v8</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="shell">
+    <canvas id="game" aria-label="Nightmare Park battle arena"></canvas>
+
+    <header id="topHud">
+      <div class="brandBlock">
+        <div class="miniLabel">Nightmare Park</div>
+        <h1>Monster Royale</h1>
+      </div>
+      <div class="statsGrid">
+        <div><span>Battle</span><strong id="battleName">Arena One</strong></div>
+        <div><span>Enemy Core</span><strong id="enemyCoreText">500/500</strong></div>
+        <div><span>Your Core</span><strong id="playerCoreText">500/500</strong></div>
+        <div><span>Skulls</span><strong id="skullText">0</strong></div>
+      </div>
+    </header>
+
+    <div id="toast" role="status" aria-live="polite"></div>
+
+    <footer id="bottomHud">
+      <div class="energyRow">
+        <div class="energyBar"><div id="energyFill"></div></div>
+        <strong id="energyText">Energy 0/10</strong>
+      </div>
+      <div class="handRow">
+        <button id="graveCard" class="cardButton selected" type="button">
+          <span class="cardTop"><b>Grave Goblin</b><em>2</em></span>
+          <span class="cardArt">☠️</span>
+          <span class="cardText">Fast melee pest</span>
+        </button>
+        <button id="candleInfo" class="cardButton locked" type="button">
+          <span class="cardTop"><b>Candle Imp</b><em>Enemy</em></span>
+          <span class="cardArt">🕯️</span>
+          <span class="cardText">Arrives in waves</span>
+        </button>
+        <button id="resetBtn" class="smallButton" type="button">Reset<br/>save</button>
+      </div>
+    </footer>
+
+    <section id="overlay" class="overlay visible">
+      <div id="overlayPanel" class="overlayPanel"></div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
