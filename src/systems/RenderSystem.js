@@ -4,7 +4,7 @@ import { MAP_IMAGE_DATA_URI } from '../data/mapImage.js';
 import { CARD_LIBRARY } from '../data/cards.js';
 import { ATMOSPHERE } from '../data/atmosphere.js';
 import { DEFENSE_LIBRARY } from '../data/defenses.js';
-import { characterProfile } from '../data/characters.js';
+import { CHARACTER_LIBRARY, characterProfile } from '../data/characters.js';
 
 export class RenderSystem {
   constructor(canvas) {
@@ -40,6 +40,38 @@ export class RenderSystem {
       }
     };
     this.mapImage.src = this.mapImageCandidates[0];
+
+    this.characterImages = new Map();
+    this.loadCharacterImages();
+  }
+
+  loadCharacterImages() {
+    for (const [id, profile] of Object.entries(CHARACTER_LIBRARY)) {
+      const art = profile.art;
+      if (!art) continue;
+      const frames = {};
+      const sources = art.frames || { idle: art.sprite, walk: art.sprite, attack: art.sprite, special: art.sprite };
+      for (const [state, src] of Object.entries(sources)) {
+        if (!src) continue;
+        const img = new Image();
+        img.decoding = 'async';
+        img.loading = 'eager';
+        img.src = src;
+        frames[state] = img;
+      }
+      if (art.sprite && !frames.sprite) {
+        const img = new Image();
+        img.decoding = 'async';
+        img.loading = 'eager';
+        img.src = art.sprite;
+        frames.sprite = img;
+      }
+      this.characterImages.set(id, frames);
+    }
+  }
+
+  isImageReady(img) {
+    return img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0;
   }
 
   resize() {
@@ -1232,16 +1264,19 @@ export class RenderSystem {
     this.drawUnitAura(ctx, unit, primary, anim, profile);
     this.drawAttackAnticipation(ctx, unit, primary, anim, profile);
 
-    switch (unit.cardId) {
-      case 'bruteClown': this.drawBruteClown(ctx, unit, primary, dark, anim); break;
-      case 'werewolfRunner': this.drawWerewolf(ctx, unit, primary, dark, anim); break;
-      case 'midnightWitch': this.drawWitch(ctx, unit, primary, dark, anim); break;
-      case 'skeletonSwarm':
-      case 'summonedSkeleton': this.drawSkeleton(ctx, unit, primary, dark, anim); break;
-      case 'gargoyle': this.drawGargoyle(ctx, unit, primary, dark, anim); break;
-      case 'pumpkinCatapult': this.drawPumpkin(ctx, unit, primary, dark, anim); break;
-      case 'graveGoblin': this.drawGoblin(ctx, unit, primary, dark, anim); break;
-      default: this.drawGenericUnit(ctx, unit, primary, dark, anim);
+    const drewPremiumSprite = this.drawPremiumSpriteUnit(ctx, unit, primary, dark, anim, profile);
+    if (!drewPremiumSprite) {
+      switch (unit.cardId) {
+        case 'bruteClown': this.drawBruteClown(ctx, unit, primary, dark, anim); break;
+        case 'werewolfRunner': this.drawWerewolf(ctx, unit, primary, dark, anim); break;
+        case 'midnightWitch': this.drawWitch(ctx, unit, primary, dark, anim); break;
+        case 'skeletonSwarm':
+        case 'summonedSkeleton': this.drawSkeleton(ctx, unit, primary, dark, anim); break;
+        case 'gargoyle': this.drawGargoyle(ctx, unit, primary, dark, anim); break;
+        case 'pumpkinCatapult': this.drawPumpkin(ctx, unit, primary, dark, anim); break;
+        case 'graveGoblin': this.drawGoblin(ctx, unit, primary, dark, anim); break;
+        default: this.drawGenericUnit(ctx, unit, primary, dark, anim);
+      }
     }
 
     ctx.shadowBlur = 0;
@@ -1315,6 +1350,143 @@ export class RenderSystem {
       profileScale: profile.scale || 1,
       locomotion
     };
+  }
+
+  selectCharacterFrame(unit, profile, anim) {
+    const id = profile.id || unit.skinId || unit.cardId;
+    const frames = this.characterImages.get(id) || this.characterImages.get(profile.aliasOf) || this.characterImages.get(unit.card.characterId) || this.characterImages.get(unit.cardId);
+    if (!frames) return null;
+    const isAttack = (unit.attackAnim || 0) > 0.03;
+    const isSpecial = (unit.abilityPulse || 0) > 0.08 || unit.frenzied;
+    const isMoving = anim.state === 'walk' || unit.motion?.state === 'walk' || (unit.motion?.speedNorm || 0) > 0.12;
+    const order = isAttack
+      ? ['attack', 'special', 'walk', 'idle', 'sprite']
+      : isSpecial
+        ? ['special', 'attack', 'walk', 'idle', 'sprite']
+        : isMoving
+          ? ['walk', 'idle', 'sprite']
+          : ['idle', 'sprite', 'walk'];
+    for (const key of order) {
+      if (this.isImageReady(frames[key])) return frames[key];
+    }
+    return null;
+  }
+
+  drawPremiumSpriteUnit(ctx, unit, primary, dark, anim, profile) {
+    const img = this.selectCharacterFrame(unit, profile, anim);
+    if (!img) return false;
+    const art = profile.art || {};
+    const attack = anim.attack;
+    const ability = anim.ability;
+    const h = (art.battlefieldHeight || Math.max(42, unit.radius * 4.8)) * (unit.card.flying ? 1.08 : 1);
+    const aspect = img.naturalWidth / Math.max(1, img.naturalHeight);
+    const w = h * aspect;
+    const anchorY = art.anchorY ?? 0.88;
+    const lunge = unit.card.attackType === 'melee' ? attack * (unit.card.special === 'frenzy' ? 15 : 9) : 0;
+    const recoil = unit.card.attackType === 'projectile' ? -attack * 5 : 0;
+    const hover = unit.card.flying ? -10 + Math.sin(anim.time * 6.2 + unit.visualSeed) * 4.5 : 0;
+    const specialPulse = unit.frenzied ? 1 : ability;
+
+    ctx.save();
+    ctx.translate(lunge + recoil, hover);
+
+    // Team-coloured readability glow beneath real art.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const glow = ctx.createRadialGradient(0, unit.radius * 0.55, 1, 0, unit.radius * 0.55, Math.max(22, unit.radius * 2.8));
+    glow.addColorStop(0, this.hexToRgba(primary, unit.team === TEAM.PLAYER ? 0.24 : 0.18));
+    glow.addColorStop(0.65, this.hexToRgba(primary, 0.05));
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.ellipse(0, unit.radius * 0.72, unit.radius * 2.2, unit.radius * 0.72, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    if (unit.hitFlash > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = clamp(unit.hitFlash / 0.16, 0, 1) * 0.42;
+      ctx.filter = 'brightness(2.4) saturate(0.3)';
+      ctx.drawImage(img, -w / 2, -h * anchorY, w, h);
+      ctx.restore();
+    }
+
+    // Legendary / ability afterimage on fast and special units.
+    if ((unit.frenzied || profile.motion?.trail || unit.card.flying) && (unit.motion?.speedNorm || 0) > 0.2) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = unit.frenzied ? 0.24 : 0.12;
+      ctx.filter = `drop-shadow(0 0 8px ${profile.signature?.vfx || primary})`;
+      ctx.translate(-Math.sign(unit.facing || 1) * 7, 1);
+      ctx.drawImage(img, -w / 2, -h * anchorY, w, h);
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.filter = `drop-shadow(0 6px 7px rgba(0,0,0,.72)) drop-shadow(0 0 ${unit.card.flying ? 10 : 5}px ${this.hexToRgba(primary, 0.38)})`;
+    ctx.drawImage(img, -w / 2, -h * anchorY, w, h);
+    ctx.restore();
+
+    // Attack and special effects are drawn around the premium art, not as placeholder bodies.
+    if (attack > 0.04) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const vfx = profile.signature?.vfx || primary;
+      const a = Math.sin(attack * Math.PI);
+      if (unit.card.attackType === 'melee') {
+        ctx.strokeStyle = this.hexToRgba(vfx, 0.26 + 0.46 * a);
+        ctx.lineWidth = 3.4;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(10 + a * 14, -h * 0.42, unit.radius + 18 + a * 8, -0.62, 0.78);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(6 + a * 11, -h * 0.28, unit.radius + 10 + a * 6, -0.1, 0.9);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = this.hexToRgba(vfx, 0.28 + a * 0.28);
+        ctx.beginPath();
+        ctx.ellipse(0, -h * 0.42, unit.radius + 14 + a * 10, unit.radius * 0.7 + a * 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = this.hexToRgba(vfx, 0.5);
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(0, -h * 0.44, unit.radius + 17 + a * 10, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (specialPulse > 0.05) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const vfx = unit.frenzied ? '#ffd86f' : (profile.signature?.vfx || primary);
+      ctx.strokeStyle = this.hexToRgba(vfx, 0.20 + specialPulse * 0.32);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 5]);
+      ctx.beginPath();
+      ctx.ellipse(0, 4, unit.radius + 20 + specialPulse * 9, unit.radius + 10 + specialPulse * 5, Math.sin(anim.time) * 0.2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // Tiny contact dust/air wake improves perceived animation when using static concept art.
+    if (!unit.card.flying && anim.state === 'walk') {
+      ctx.save();
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = this.hexToRgba(primary, 0.34);
+      const step = Math.sin(anim.step * 2);
+      ctx.beginPath();
+      ctx.ellipse(-8 * step, unit.radius * 0.92, 5, 2, 0, 0, Math.PI * 2);
+      ctx.ellipse(8 * step, unit.radius * 0.9, 4, 1.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.restore();
+    return true;
   }
 
   drawUnitMotionTrail(ctx, unit, primary, anim, profile) {

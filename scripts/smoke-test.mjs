@@ -14,11 +14,11 @@ import { CHARACTER_LIBRARY, CHARACTER_PIPELINE } from '../src/data/characters.js
 import { CharacterMotionSystem } from '../src/systems/CharacterMotionSystem.js';
 import { Unit } from '../src/entities/Unit.js';
 
-assert.equal(PLAYER_DECK.length, 8, 'V18 should retain the full 8-card player deck');
-assert.ok(ENEMY_DECK.length >= 7, 'V18 enemy needs its own deck');
+assert.ok(PLAYER_DECK.length >= 8, 'V19 should retain a deep player deck with monsters and buildings');
+assert.ok(ENEMY_DECK.length >= 7, 'V19 enemy needs its own deck');
 assert.equal(MAP.lanes.length, 3, 'The map should retain 3 logical path routes');
 assert.ok(MAP.lanes.every(lane => lane.points.length >= 10), 'Each route should be organic with enough waypoints');
-assert.ok(MAP.background.src.includes('nightmare_park_arena_v14_4k.jpg'), 'V18 should keep the embedded 4K arena asset');
+assert.ok(MAP.background.src.includes('nightmare_park_arena_v14_4k.jpg'), 'V19 should keep the embedded 4K arena asset');
 assert.ok(existsSync(new URL('../assets/maps/nightmare_park_arena_v14_4k.jpg', import.meta.url)), 'Map art asset must exist');
 assert.ok(statSync(new URL('../assets/maps/nightmare_park_arena_v14_4k.jpg', import.meta.url)).size > 1_000_000, 'Map art should not be tiny');
 assert.ok(MAP_IMAGE_DATA_URI.startsWith('data:image/jpeg;base64,'), 'Embedded map fallback should be available');
@@ -80,7 +80,7 @@ assert.ok(fakeGame.deployCalls > 0, 'Enemy AI should attempt to play a card');
 assert.ok(ATMOSPHERE.torchClusters.length >= 8, 'V16 should define multiple torch clusters');
 assert.ok(ATMOSPHERE.fogBands.length >= 5, 'V16 should define multiple animated fog bands');
 assert.ok(ATMOSPHERE.bats.length >= 3, 'V16 should include ambient bat paths');
-assert.ok(Object.keys(DEFENSE_LIBRARY).length >= 4, 'V18 should define customisable defence buildings');
+assert.ok(Object.keys(DEFENSE_LIBRARY).length >= 4, 'V19 should define customisable defence buildings');
 assert.ok(MAP.towers.every(tower => tower.defenseId), 'Every map tower should now reference a defence building skin');
 assert.ok(MAP.towers.some(tower => tower.defenseId === 'greenGateCore'), 'Player core should be a real defence building');
 assert.ok(MAP.towers.some(tower => tower.defenseId === 'crimsonMausoleumCore'), 'Enemy core should be a real defence building');
@@ -96,16 +96,27 @@ assert.ok(atmosphere.state.time > 1, 'Atmosphere time should advance');
 assert.ok(atmosphere.state.danger > 0, 'Atmosphere danger should react to match state');
 
 
-const playableCharacterIds = ['bruteClown', 'werewolfRunner', 'midnightWitch', 'skeletonSwarm', 'gargoyle', 'pumpkinCatapult', 'graveGoblin'];
+const playableCharacterIds = ['mirrorClown', 'werewolfKing', 'phantomBride', 'zombieRunner', 'tinBat', 'candleImp', 'graveGoblin'];
 for (const id of playableCharacterIds) {
   const profile = CHARACTER_LIBRARY[id];
-  assert.ok(profile, `Missing V18 character profile for ${id}`);
+  assert.ok(profile, `Missing V19 character profile for ${id}`);
   assert.ok(profile.silhouette, `${id} needs a battlefield silhouette`);
   assert.ok(profile.motion?.locomotion, `${id} needs a locomotion style`);
   assert.ok(profile.signature?.weapon, `${id} needs a weapon signature`);
   assert.ok(profile.portrait?.top, `${id} needs card portrait data`);
 }
-assert.equal(CHARACTER_PIPELINE.version, 'V18', 'Character pipeline should identify V18');
+
+for (const id of playableCharacterIds) {
+  const profile = CHARACTER_LIBRARY[id];
+  assert.ok(profile.art?.sprite, `${id} needs a runtime sprite asset`);
+  assert.ok(profile.art?.portrait, `${id} needs a card portrait asset`);
+  const spritePath = new URL(`../${profile.art.sprite.replace(/^\.\//, '')}`, import.meta.url);
+  const portraitPath = new URL(`../${profile.art.portrait.replace(/^\.\//, '')}`, import.meta.url);
+  assert.ok(existsSync(spritePath), `Sprite asset missing for ${id}: ${spritePath}`);
+  assert.ok(existsSync(portraitPath), `Portrait asset missing for ${id}: ${portraitPath}`);
+  assert.ok(statSync(spritePath).size > 8_000, `${id} sprite should not be a tiny placeholder`);
+}
+assert.equal(CHARACTER_PIPELINE.version, 'V19', 'Character pipeline should identify V19');
 
 const motionSystem = new CharacterMotionSystem();
 const testUnit = new Unit({ card: CARD_LIBRARY.werewolfRunner, team: TEAM.PLAYER, laneIndex: 1, progress: 0.18, offset: 0 });
@@ -117,8 +128,8 @@ testUnit.progress += 0.015;
 testUnit.syncPosition(MAP);
 const fakeMotionGame = { state: { units: [testUnit] }, effects: [] };
 motionSystem.update(fakeMotionGame, 0.1);
-assert.ok(testUnit.motion.state === 'walk' || testUnit.motion.state === 'special', 'V18 motion system should detect walking units');
-assert.ok(Number.isFinite(testUnit.motion.stride), 'V18 motion system should advance stride');
-assert.ok(Array.isArray(testUnit.motion.trail), 'V18 motion system should maintain optional trails');
+assert.ok(testUnit.motion.state === 'walk' || testUnit.motion.state === 'special', 'V19 motion system should detect walking units');
+assert.ok(Number.isFinite(testUnit.motion.stride), 'V19 motion system should advance stride');
+assert.ok(Array.isArray(testUnit.motion.trail), 'V19 motion system should maintain optional trails');
 
-console.log('Nightmare Park V18 character-pipeline/motion/enemy-brain/navmesh smoke test passed.');
+console.log('Nightmare Park V19 premium-visual/character-art/enemy-brain/navmesh smoke test passed.');

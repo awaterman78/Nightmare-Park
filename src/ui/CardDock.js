@@ -67,8 +67,10 @@ export class CardDock {
       button.style.setProperty('--portrait-top', profile.portrait.top);
       button.style.setProperty('--portrait-bottom', profile.portrait.bottom);
       button.style.setProperty('--portrait-accent', profile.portrait.accent);
+      button.dataset.rarity = card.rarity || 'common';
       button.innerHTML = `
         <span class="card__cost">${card.cost}</span>
+        <span class="card__rarity">${(card.rarity || 'common').toUpperCase()}</span>
         <span class="card__portrait card__portrait--${card.characterId || card.id}" aria-hidden="true">
           ${this.renderPortrait(card, profile)}
         </span>
@@ -83,6 +85,11 @@ export class CardDock {
 
 
   renderPortrait(card, profile) {
+    const art = profile?.art?.portrait || profile?.art?.sprite;
+    if (art) {
+      const zoom = profile.art?.cardZoom || 1;
+      return `<img class="card__portrait-img" src="${art}" alt="" style="--portrait-zoom:${zoom}" />`;
+    }
     const id = card.characterId || card.id;
     if (card.kind === 'building') return `<span class="portrait-building"><span></span></span>`;
     if (id === 'bruteClown') return `<span class="portrait-clown"><i></i><b></b></span>`;
@@ -102,9 +109,11 @@ export class CardDock {
       this.nextRoot.textContent = '';
       return;
     }
+    const profile = characterProfile(card.characterId || card.id);
+    const art = profile?.art?.portrait || profile?.art?.sprite;
     this.nextRoot.innerHTML = `
       <span class="next-card__label">NEXT</span>
-      <span class="next-card__icon">${card.icon}</span>
+      ${art ? `<img class="next-card__portrait" src="${art}" alt="" />` : `<span class="next-card__icon">${card.icon}</span>`}
       <strong>${card.shortName}</strong>
     `;
   }
@@ -156,8 +165,10 @@ export class CardDock {
 
   showGhost(card, x, y) {
     this.ghost.hidden = false;
+    const profile = characterProfile(card.characterId || card.id);
+    const art = profile?.art?.portrait || profile?.art?.sprite;
     this.ghost.innerHTML = `
-      <div style="font-size:28px">${card.icon}</div>
+      ${art ? `<img class="drag-ghost__portrait" src="${art}" alt="" />` : `<div style="font-size:28px">${card.icon}</div>`}
       <strong style="display:block;font-size:11px;line-height:1.05">${card.shortName}</strong>
       <small style="color:#ffd86f;font-weight:900">${card.cost} energy</small>
     `;

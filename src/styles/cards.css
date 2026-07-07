@@ -228,3 +228,109 @@
 .portrait-building::before { content:''; position:absolute; left:2px; right:2px; top:-10px; height:18px; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: var(--portrait-top); }
 .portrait-building span { left: 11px; top: 15px; width: 14px; height: 18px; border-radius: 50% 50% 4px 4px; background: rgba(0,0,0,.48); box-shadow: 0 0 10px var(--portrait-accent); }
 .portrait-generic { font-size: 28px; }
+
+/* V19 premium visual reset: cards now use actual monster art assets, not procedural emoji/vector placeholders. */
+#card-dock {
+  min-height: 150px;
+  gap: 9px;
+  padding: 12px 10px 14px;
+  background:
+    linear-gradient(180deg, rgba(40, 19, 62, .92), rgba(8, 5, 13, .96)),
+    radial-gradient(circle at 50% 0, rgba(255,216,111,.12), transparent 45%);
+  border-top-color: rgba(255,216,111,.26);
+}
+
+.card {
+  min-height: 128px;
+  padding: 8px 6px 8px;
+  border-width: 2px;
+  border-color: rgba(255,255,255,.16);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.10), transparent 22%),
+    radial-gradient(circle at 50% 24%, var(--card-glow), transparent 48%),
+    linear-gradient(180deg, var(--card-top), var(--card-bottom));
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.46),
+    inset 0 1px 0 rgba(255,255,255,.18),
+    inset 0 -18px 26px rgba(0,0,0,.34);
+}
+.card[data-rarity="common"] { border-color: rgba(142, 255, 190, .28); }
+.card[data-rarity="rare"] { border-color: rgba(93, 205, 255, .42); }
+.card[data-rarity="epic"] { border-color: rgba(213, 140, 255, .52); }
+.card[data-rarity="legendary"] {
+  border-color: rgba(255,216,111,.72);
+  box-shadow:
+    0 12px 34px rgba(0,0,0,.48),
+    0 0 24px rgba(255,216,111,.18),
+    inset 0 1px 0 rgba(255,255,255,.2),
+    inset 0 -18px 28px rgba(0,0,0,.36);
+}
+
+.card__rarity {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  z-index: 3;
+  max-width: 56px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.34);
+  color: rgba(255,255,255,.78);
+  font-size: 6.5px;
+  font-weight: 1000;
+  letter-spacing: .06em;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.1);
+}
+.card[data-rarity="legendary"] .card__rarity { color: #ffd86f; }
+.card[data-rarity="epic"] .card__rarity { color: #d58cff; }
+.card[data-rarity="rare"] .card__rarity { color: #88efff; }
+
+.card__portrait {
+  width: 72px;
+  height: 66px;
+  margin: 7px auto 4px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 34%, color-mix(in srgb, var(--portrait-accent) 38%, transparent), transparent 52%),
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.38)),
+    linear-gradient(180deg, var(--portrait-top), var(--portrait-bottom));
+  box-shadow:
+    inset 0 -12px 22px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,255,255,.22),
+    0 8px 18px rgba(0,0,0,.42),
+    0 0 14px color-mix(in srgb, var(--portrait-accent) 20%, transparent);
+}
+.card__portrait-img {
+  position: relative;
+  z-index: 2;
+  width: 108%;
+  height: 108%;
+  object-fit: contain;
+  transform: scale(var(--portrait-zoom, 1));
+  filter: drop-shadow(0 6px 8px rgba(0,0,0,.75)) drop-shadow(0 0 5px rgba(255,255,255,.15));
+  pointer-events: none;
+}
+.card__portrait::after { height: 10px; bottom: 2px; opacity: .72; }
+
+.card__name {
+  min-height: 24px;
+  font-size: 10.5px;
+  letter-spacing: .02em;
+}
+.card__role { font-size: 7.2px; opacity: .88; }
+
+.next-card__portrait {
+  width: 26px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,.8));
+}
+.drag-ghost__portrait {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  filter: drop-shadow(0 7px 10px rgba(0,0,0,.8));
+}

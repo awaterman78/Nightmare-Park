@@ -65,7 +65,7 @@ export class Game {
     this.cardDock?.setHand(this.state.playerHand);
     this.cardDock?.setNextCard(this.state.playerNextCard);
     this.cardDock?.clearSelected();
-    this.hud?.pushMessage('V18 loaded: character asset pipeline, motion rigs and cinematic monster movement.');
+    this.hud?.pushMessage('V19 loaded: real monster art assets, premium cards and battlefield sprite renderer.');
   }
 
   update(dt) {

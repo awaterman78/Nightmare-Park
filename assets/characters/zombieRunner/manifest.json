@@ -1,0 +1,15 @@
+{
+  "id": "zombieRunner",
+  "source": "Nightmare Park Monster Roster concept board",
+  "sourceName": "Zombie Runner",
+  "rarity": "rare",
+  "files": [
+    "sprite.png",
+    "idle.png",
+    "walk.png",
+    "attack.png",
+    "special.png",
+    "portrait.png"
+  ],
+  "pipeline": "V19 premium extracted art asset; replace with sprite-sheet or Spine rig later without changing id."
+}

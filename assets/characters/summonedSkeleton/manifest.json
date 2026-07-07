@@ -1,0 +1,13 @@
+{
+  "id": "summonedSkeleton",
+  "source": "Zombie Runner fallback minion art",
+  "files": [
+    "sprite.png",
+    "idle.png",
+    "walk.png",
+    "attack.png",
+    "special.png",
+    "portrait.png"
+  ],
+  "pipeline": "Temporary V19 summon skin; replace with skeleton swarm sheet."
+}
