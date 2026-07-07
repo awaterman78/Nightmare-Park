@@ -1,1003 +1,1483 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Nightmare Park, Monster Royale - V10 Live Build</title>
-<style>
-  :root {
-    --bg0:#070710;
-    --bg1:#101020;
-    --panel:rgba(14,14,28,.88);
-    --panel2:rgba(28,22,45,.92);
-    --gold:#ffd166;
-    --green:#7cff9b;
-    --red:#ff5f73;
-    --purple:#b58cff;
-    --blue:#74d7ff;
-    --text:#fff8e8;
-    --muted:#b9b0cf;
-  }
-  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html, body { margin:0; height:100%; overflow:hidden; background:var(--bg0); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
-  body { display:flex; align-items:center; justify-content:center; }
-  #shell { position:relative; width:min(100vw, 520px); height:100dvh; max-height:960px; background:#080812; overflow:hidden; border-left:1px solid rgba(255,255,255,.08); border-right:1px solid rgba(255,255,255,.08); touch-action:none; }
-  canvas { display:block; width:100%; height:100%; touch-action:none; }
-  .top-bar { position:absolute; left:10px; right:10px; top:calc(8px + env(safe-area-inset-top)); z-index:5; display:grid; grid-template-columns:1fr auto; gap:8px; align-items:start; pointer-events:none; }
-  .build-label { grid-column:1 / -1; text-align:center; font-size:12px; letter-spacing:.09em; font-weight:900; color:#111; background:linear-gradient(90deg,#fadb64,#ff8f70,#b58cff); border:2px solid rgba(255,255,255,.45); border-radius:999px; padding:5px 10px; box-shadow:0 6px 20px rgba(0,0,0,.4); text-shadow:none; }
-  .stat-card { background:var(--panel); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:8px 10px; box-shadow:0 8px 26px rgba(0,0,0,.35); backdrop-filter: blur(8px); }
-  .stat-title { font-size:12px; color:var(--gold); font-weight:900; letter-spacing:.04em; }
-  .stat-sub { font-size:11px; color:var(--muted); margin-top:2px; }
-  .mini-grid { display:grid; gap:4px; min-width:118px; }
-  .hp-line { font-size:11px; color:#fff; display:flex; justify-content:space-between; gap:8px; }
-  .hp-track { height:7px; border-radius:999px; background:rgba(255,255,255,.13); overflow:hidden; margin-top:2px; }
-  .hp-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#ff5f73,#ffd166); width:100%; transition:width .12s linear; }
-  #message { position:absolute; z-index:6; left:18px; right:18px; top:calc(92px + env(safe-area-inset-top)); text-align:center; min-height:28px; font-size:14px; font-weight:900; color:#fff; text-shadow:0 3px 12px #000; pointer-events:none; }
-  #bottomHud { position:absolute; left:0; right:0; bottom:0; z-index:7; padding:10px 10px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,rgba(3,3,10,0),rgba(3,3,10,.96) 20%,rgba(3,3,10,.98)); pointer-events:auto; }
-  .energy-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-  .energy-label { font-size:12px; font-weight:900; color:var(--blue); min-width:58px; }
-  .energy-track { flex:1; height:16px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.16); box-shadow:inset 0 2px 8px rgba(0,0,0,.5); }
-  #energyFill { height:100%; width:0%; background:linear-gradient(90deg,#4cc9f0,#b58cff,#ffd166); border-radius:999px; }
-  #energyText { font-size:12px; font-weight:900; color:#fff; min-width:45px; text-align:right; }
-  .cards { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:stretch; }
-  .card { position:relative; border:2px solid rgba(255,255,255,.18); background:linear-gradient(180deg,rgba(35,28,64,.96),rgba(13,13,30,.98)); color:#fff; border-radius:18px; padding:8px; min-height:82px; display:grid; grid-template-columns:44px 1fr; gap:8px; align-items:center; box-shadow:0 10px 30px rgba(0,0,0,.35); cursor:pointer; user-select:none; }
-  .card.selected { border-color:var(--gold); box-shadow:0 0 0 3px rgba(255,209,102,.25), 0 14px 32px rgba(0,0,0,.45); transform:translateY(-2px); }
-  .card.locked { opacity:.55; filter:saturate(.5); }
-  .portrait { width:44px; height:54px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:28px; background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.25),rgba(255,255,255,.05) 35%,rgba(0,0,0,.35)); border:1px solid rgba(255,255,255,.18); }
-  .card-name { font-size:13px; font-weight:1000; line-height:1.05; }
-  .card-role { font-size:10px; color:var(--muted); margin-top:3px; line-height:1.1; }
-  .cost { position:absolute; right:7px; top:7px; width:25px; height:25px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#55ddff,#6d55ff); color:#fff; border:1px solid rgba(255,255,255,.35); font-size:13px; font-weight:1000; box-shadow:0 4px 12px rgba(0,0,0,.4); }
-  .small-btn { border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.08); color:#fff; border-radius:16px; padding:8px 10px; font-weight:900; font-size:11px; cursor:pointer; }
-  .small-btn:active, .card:active, .big-btn:active, .reward-btn:active { transform:scale(.98); }
-  .overlay { position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; padding:18px; background:radial-gradient(circle at 50% 25%,rgba(113,78,255,.28),rgba(0,0,0,.88) 52%,rgba(0,0,0,.96)); backdrop-filter:blur(6px); }
-  .overlay.hidden { display:none; }
-  .modal { width:min(100%,460px); border-radius:28px; border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg,rgba(32,27,55,.96),rgba(9,9,20,.98)); padding:20px; box-shadow:0 25px 80px rgba(0,0,0,.55); text-align:center; }
-  .logo { font-size:32px; line-height:1; font-weight:1000; letter-spacing:-.04em; margin:6px 0 3px; }
-  .logo span { display:block; font-size:15px; letter-spacing:.13em; color:var(--gold); margin-top:8px; }
-  .modal p { color:var(--muted); line-height:1.35; margin:10px 0; font-size:14px; }
-  .big-btn { width:100%; margin-top:12px; border:0; border-radius:18px; padding:14px 16px; font-size:16px; font-weight:1000; color:#161218; background:linear-gradient(90deg,#ffd166,#ff8f70); cursor:pointer; box-shadow:0 12px 30px rgba(255,160,80,.25); }
-  .ghost-btn { width:100%; margin-top:9px; border:1px solid rgba(255,255,255,.18); border-radius:18px; padding:12px 14px; font-size:14px; font-weight:900; color:#fff; background:rgba(255,255,255,.08); cursor:pointer; }
-  .progress-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0; }
-  .progress-cell { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:10px 8px; }
-  .progress-num { font-size:18px; font-weight:1000; color:#fff; }
-  .progress-label { font-size:10px; color:var(--muted); margin-top:2px; }
-  .reward-list { display:grid; gap:9px; margin-top:12px; }
-  .reward-btn { text-align:left; border:1px solid rgba(255,255,255,.17); border-radius:18px; padding:12px; background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.045)); color:#fff; cursor:pointer; }
-  .reward-title { font-weight:1000; color:var(--gold); font-size:15px; }
-  .reward-desc { color:var(--muted); font-size:12px; margin-top:4px; line-height:1.25; }
-  .shake { animation:shake .26s linear; }
-  @keyframes shake { 0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)} }
-  @media (max-height:720px){ .card{min-height:72px;padding:7px}.portrait{height:48px}.card-name{font-size:12px}.card-role{display:none}.top-bar{gap:6px}.stat-card{padding:7px 8px}.logo{font-size:28px} }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#090512" />
+  <title>Nightmare Park: Monster Royale — V11 Serious Build</title>
+  <style>
+    :root {
+      --bg0:#090512;
+      --bg1:#140b24;
+      --acid:#79ff6a;
+      --gold:#ffd76a;
+      --pink:#ff4ed8;
+      --cyan:#80e9ff;
+    }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 10%, rgba(128,233,255,.14), transparent 24%),
+        radial-gradient(circle at 12% 88%, rgba(255,78,216,.14), transparent 28%),
+        linear-gradient(180deg, #06030c 0%, #110720 52%, #050309 100%);
+      color: #fff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      touch-action: none;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #game {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      image-rendering: auto;
+      touch-action: none;
+    }
+    #versionFlag {
+      position: fixed;
+      top: max(8px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+      padding: 6px 12px;
+      border: 1px solid rgba(255,215,106,.55);
+      border-radius: 999px;
+      background: rgba(10, 5, 18, .72);
+      box-shadow: 0 0 20px rgba(121,255,106,.18), inset 0 0 18px rgba(255,215,106,.08);
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      pointer-events: none;
+      white-space: nowrap;
+      text-shadow: 0 2px 8px rgba(0,0,0,.9);
+    }
+    #fallbackText {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: max(8px, env(safe-area-inset-bottom));
+      z-index: 4;
+      text-align: center;
+      color: rgba(255,255,255,.45);
+      font-size: 10px;
+      letter-spacing: .04em;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
-<div id="shell">
+  <div id="versionFlag">NIGHTMARE PARK V11 SERIOUS BUILD • ROOT INDEX</div>
   <canvas id="game" aria-label="Nightmare Park Monster Royale game canvas"></canvas>
-
-  <div class="top-bar">
-    <div class="build-label">NIGHTMARE PARK V10 LIVE BUILD - IF YOU CAN SEE THIS, THE NEW INDEX IS LIVE</div>
-    <div class="stat-card">
-      <div class="stat-title" id="battleName">Arena One</div>
-      <div class="stat-sub" id="battleSub">Select Grave Goblin, tap your half, crack the enemy gate.</div>
-    </div>
-    <div class="stat-card mini-grid">
-      <div class="hp-line"><span>Enemy Gate</span><strong id="enemyHpText">100%</strong></div>
-      <div class="hp-track"><div id="enemyHpFill" class="hp-fill"></div></div>
-      <div class="hp-line"><span>Your Gate</span><strong id="playerHpText">100%</strong></div>
-      <div class="hp-track"><div id="playerHpFill" class="hp-fill"></div></div>
-    </div>
-  </div>
-
-  <div id="message"></div>
-
-  <div id="bottomHud">
-    <div class="energy-row">
-      <div class="energy-label">ENERGY</div>
-      <div class="energy-track"><div id="energyFill"></div></div>
-      <div id="energyText">5/10</div>
-    </div>
-    <div class="cards">
-      <div id="graveCard" class="card selected" role="button" tabindex="0">
-        <div class="portrait">🦴</div>
-        <div>
-          <div class="card-name">Grave Goblin</div>
-          <div class="card-role">Fast melee pressure. Tap bottom half to deploy.</div>
-        </div>
-        <div class="cost">2</div>
-      </div>
-      <div id="impCard" class="card locked" role="button" tabindex="0">
-        <div class="portrait">🕯️</div>
-        <div>
-          <div class="card-name">Candle Imp</div>
-          <div class="card-role">Enemy preview. Unlock after Goblin feels right.</div>
-        </div>
-        <div class="cost">?</div>
-      </div>
-      <button id="resetBtn" class="small-btn">RESET<br/>SAVE</button>
-    </div>
-  </div>
-
-  <div id="overlay" class="overlay">
-    <div class="modal" id="modal"></div>
-  </div>
-</div>
+  <div id="fallbackText">Tap a monster card, then tap your half of a lane to deploy.</div>
 
 <script>
-(function(){
+(() => {
   'use strict';
 
+  const BUILD = 'V11 SERIOUS BUILD';
+  const V = { w: 390, h: 844 };
+  const FIELD = { x: 18, y: 74, w: 354, h: 584, bottom: 658, top: 74, mid: 366 };
+  const LANES = [82, 195, 308];
+  const LANE_NAMES = ['LEFT', 'CENTRE', 'RIGHT'];
+  const PLAYER = 'player';
+  const ENEMY = 'enemy';
+
   const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const shell = document.getElementById('shell');
-  const overlay = document.getElementById('overlay');
-  const modal = document.getElementById('modal');
-  const messageEl = document.getElementById('message');
-  const energyFill = document.getElementById('energyFill');
-  const energyText = document.getElementById('energyText');
-  const enemyHpFill = document.getElementById('enemyHpFill');
-  const playerHpFill = document.getElementById('playerHpFill');
-  const enemyHpText = document.getElementById('enemyHpText');
-  const playerHpText = document.getElementById('playerHpText');
-  const battleNameEl = document.getElementById('battleName');
-  const battleSubEl = document.getElementById('battleSub');
-  const graveCard = document.getElementById('graveCard');
-  const impCard = document.getElementById('impCard');
-  const resetBtn = document.getElementById('resetBtn');
-
-  const SAVE_KEY = 'nightmareParkMonsterRoyaleV10';
-  let W = 390;
-  let H = 820;
-  let dpr = 1;
+  const ctx = canvas.getContext('2d', { alpha: false });
+  let dpr = 1, scale = 1, offX = 0, offY = 0;
   let last = performance.now();
-  let raf = 0;
-  let pointer = { x: 0, y: 0, active: false };
-  let toastUntil = 0;
+  let pointerDown = false;
 
-  const battles = [
-    { name:'Battle 1: Graveyard Warmup', sub:'Break the enemy gate while holding your own.', hpBoost:0, reward:20,
-      waves:[
-        { t:2, items:[['enemyGoblin',1]] },
-        { t:8, items:[['enemyGoblin',2]] },
-        { t:15, items:[['enemyGoblin',2],['candleImp',1]] },
-        { t:24, items:[['enemyGoblin',3]] },
-        { t:35, items:[['enemyGoblin',2],['candleImp',2]] },
-        { t:49, items:[['enemyBruiser',1],['enemyGoblin',2]] }
-      ]},
-    { name:'Battle 2: Candle Trouble', sub:'Candle Imps sit back and chip your goblins down.', hpBoost:.18, reward:35,
-      waves:[
-        { t:2, items:[['enemyGoblin',2]] },
-        { t:9, items:[['candleImp',2]] },
-        { t:17, items:[['enemyGoblin',3],['candleImp',1]] },
-        { t:28, items:[['enemyBruiser',1],['candleImp',2]] },
-        { t:42, items:[['enemyGoblin',4],['candleImp',2]] },
-        { t:57, items:[['enemyBruiser',2],['candleImp',2]] }
-      ]},
-    { name:'Battle 3: Gate Cracker', sub:'The enemy rushes hard. Spend fast and swarm.', hpBoost:.35, reward:55,
-      waves:[
-        { t:2, items:[['enemyGoblin',3]] },
-        { t:8, items:[['enemyBruiser',1],['enemyGoblin',2]] },
-        { t:16, items:[['candleImp',3]] },
-        { t:26, items:[['enemyBruiser',2],['enemyGoblin',3]] },
-        { t:40, items:[['enemyGoblin',5],['candleImp',2]] },
-        { t:55, items:[['enemyBruiser',2],['candleImp',3],['enemyGoblin',3]] }
-      ]}
-  ];
+  const rand = mulberry32(986731);
+  const decor = makeDecor();
+  let unitId = 1;
+  let state = null;
 
-  const defaultProgress = () => ({
-    version: 10,
-    goblinLevel: 1,
-    wins: 0,
-    skulls: 0,
-    battle: 0,
-    upgrades: { damage: 0, speed: 0, hp: 0, cost: 0 }
-  });
+  const specs = {
+    graveGoblin: {
+      name: 'Grave Goblin', short: 'Goblin', cost: 3, hp: 78, speed: 30, dmg: 16,
+      range: 18, cooldown: .68, radius: 11, type: 'melee', tint: '#7dff6b', dark: '#25331e',
+      desc: 'Fast slasher', card: '#234829'
+    },
+    candleImp: {
+      name: 'Candle Imp', short: 'Imp', cost: 2, hp: 52, speed: 22, dmg: 9,
+      range: 64, cooldown: 1.04, radius: 10, type: 'ranged', projectile: 'flame', tint: '#ffb43f', dark: '#4a241b',
+      desc: 'Burning ranged', card: '#4a241b'
+    },
+    boneBrute: {
+      name: 'Bone Brute', short: 'Brute', cost: 5, hp: 188, speed: 15, dmg: 29,
+      range: 20, cooldown: 1.08, radius: 15, type: 'melee', tint: '#e7ddc2', dark: '#493f33',
+      desc: 'Slow tank', card: '#3b3329'
+    },
+    batSwarm: {
+      name: 'Bat Swarm', short: 'Bats', cost: 3, hp: 26, speed: 42, dmg: 6,
+      range: 16, cooldown: .52, radius: 7, type: 'melee', tint: '#c59cff', dark: '#241b38',
+      desc: 'Three tiny attackers', card: '#30214c'
+    }
+  };
 
-  let progress = loadProgress();
-  let game = null;
+  const cards = ['graveGoblin', 'candleImp', 'boneBrute', 'batSwarm'];
+  const cardRects = [];
 
-  function loadProgress(){
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if(!raw) return defaultProgress();
-      const data = JSON.parse(raw);
-      if(!data || data.version !== 10) return defaultProgress();
-      data.upgrades = Object.assign({damage:0,speed:0,hp:0,cost:0}, data.upgrades || {});
-      return Object.assign(defaultProgress(), data);
-    } catch(e) { return defaultProgress(); }
-  }
-
-  function saveProgress(){
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); } catch(e) {}
-  }
-
-  function resize(){
-    const rect = shell.getBoundingClientRect();
-    W = Math.max(320, rect.width);
-    H = Math.max(620, rect.height);
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.floor(W * dpr);
-    canvas.height = Math.floor(H * dpr);
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    if(game) layoutStructures();
-  }
-
-  function currentBattle(){
-    const baseIndex = Math.min(progress.battle, battles.length - 1);
-    return battles[baseIndex];
-  }
-
-  function endlessScale(){
-    return progress.battle >= battles.length ? 1 + (progress.battle - battles.length + 1) * .16 : 1;
-  }
-
-  function newGame(){
-    game = {
-      phase:'battle',
-      time:0,
-      energy:5,
-      selected:'graveGoblin',
-      units:[],
-      structures:[],
-      particles:[],
-      projectiles:[],
-      spawned:{},
-      cameraShake:0,
-      outcome:null
+  function init() {
+    unitId = 1;
+    state = {
+      time: 0,
+      energy: 5,
+      maxEnergy: 10,
+      selected: 0,
+      units: [],
+      towers: makeTowers(),
+      projectiles: [],
+      particles: [],
+      texts: [],
+      wave: 1,
+      waveTimer: 2.4,
+      shake: 0,
+      flash: 0,
+      over: null,
+      toast: 'V11 is a fresh playable root build. Tap card → tap lane.',
+      toastTimer: 4.0,
+      lastDeploy: 0
     };
-    layoutStructures();
-    overlay.classList.add('hidden');
-    showToast('Tap Grave Goblin, then tap your half. Swarm the enemy gate.', 2200);
   }
 
-  function layoutStructures(){
-    if(!game) return;
-    const battle = currentBattle();
-    const scale = endlessScale();
-    const boost = 1 + battle.hpBoost + Math.max(0, scale - 1) * .45;
-    const existing = new Map(game.structures.map(s => [s.id, s]));
-    const defs = [
-      { id:'enemyCore', team:'enemy', kind:'core', x:W*.5, y:86, r:30, maxHp:Math.round(470 * boost), range:0, dmg:0, cd:0 },
-      { id:'enemyTowerL', team:'enemy', kind:'tower', x:W*.27, y:168, r:24, maxHp:Math.round(230 * boost), range:148, dmg:15*scale, cd:.88 },
-      { id:'enemyTowerR', team:'enemy', kind:'tower', x:W*.73, y:168, r:24, maxHp:Math.round(230 * boost), range:148, dmg:15*scale, cd:.88 },
-      { id:'playerCore', team:'player', kind:'core', x:W*.5, y:H-190, r:30, maxHp:520, range:0, dmg:0, cd:0 },
-      { id:'playerTowerL', team:'player', kind:'tower', x:W*.27, y:H-282, r:24, maxHp:250, range:155, dmg:17, cd:.82 },
-      { id:'playerTowerR', team:'player', kind:'tower', x:W*.73, y:H-282, r:24, maxHp:250, range:155, dmg:17, cd:.82 }
+  function makeTowers() {
+    return [
+      tower('enemy-left', ENEMY, 0, LANES[0], 200, 360, 'side'),
+      tower('enemy-core', ENEMY, 1, LANES[1], 134, 720, 'core'),
+      tower('enemy-right', ENEMY, 2, LANES[2], 200, 360, 'side'),
+      tower('player-left', PLAYER, 0, LANES[0], 566, 360, 'side'),
+      tower('player-core', PLAYER, 1, LANES[1], 632, 720, 'core'),
+      tower('player-right', PLAYER, 2, LANES[2], 566, 360, 'side')
     ];
-    game.structures = defs.map(d => {
-      const old = existing.get(d.id);
-      if(old) {
-        const pct = old.hp / Math.max(1, old.maxHp);
-        return Object.assign(old, d, { hp: Math.min(d.maxHp, Math.max(old.hp, Math.round(d.maxHp * pct))) });
+  }
+
+  function tower(id, team, lane, x, y, hp, kind) {
+    return {
+      id, team, lane, x, y, hp, maxHp: hp, kind,
+      range: kind === 'core' ? 128 : 110,
+      dmg: kind === 'core' ? 18 : 14,
+      cooldown: kind === 'core' ? .74 : .86,
+      cd: rand() * .4,
+      radius: kind === 'core' ? 28 : 24,
+      hit: 0
+    };
+  }
+
+  function resize() {
+    dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    const cw = window.innerWidth;
+    const ch = window.innerHeight;
+    canvas.width = Math.floor(cw * dpr);
+    canvas.height = Math.floor(ch * dpr);
+    scale = Math.min(cw / V.w, ch / V.h);
+    offX = (cw - V.w * scale) / 2;
+    offY = (ch - V.h * scale) / 2;
+  }
+
+  window.addEventListener('resize', resize, { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(resize, 150), { passive: true });
+
+  canvas.addEventListener('pointerdown', handlePointerDown, { passive: false });
+  canvas.addEventListener('pointerup', () => { pointerDown = false; }, { passive: true });
+  canvas.addEventListener('pointercancel', () => { pointerDown = false; }, { passive: true });
+
+  function handlePointerDown(e) {
+    e.preventDefault();
+    pointerDown = true;
+    const p = screenToGame(e.clientX, e.clientY);
+    if (!inside(p.x, p.y, 0, 0, V.w, V.h)) return;
+
+    if (state.over) {
+      init();
+      return;
+    }
+
+    for (let i = 0; i < cardRects.length; i++) {
+      const r = cardRects[i];
+      if (inside(p.x, p.y, r.x, r.y, r.w, r.h)) {
+        const key = cards[i];
+        const cost = specs[key].cost;
+        if (state.energy + .001 < cost) {
+          toast('Not enough cursed energy for ' + specs[key].name + '.', 1.2);
+          popText(p.x, p.y - 8, 'Need ' + cost, '#ff6b6b');
+          state.shake = .08;
+        } else {
+          state.selected = i;
+          toast(specs[key].name + ' selected. Tap your half of a lane.', 1.8);
+        }
+        return;
       }
-      return Object.assign({ hp:d.maxHp, attackTimer:0, dead:false }, d);
-    });
+    }
+
+    const selectedKey = cards[state.selected];
+    const selectedSpec = specs[selectedKey];
+    if (p.y > FIELD.mid + 24 && p.y < FIELD.bottom - 18 && p.x > FIELD.x && p.x < FIELD.x + FIELD.w) {
+      if (state.energy + .001 < selectedSpec.cost) {
+        toast('Not enough cursed energy for ' + selectedSpec.name + '.', 1.2);
+        popText(p.x, p.y - 8, 'Need ' + selectedSpec.cost, '#ff6b6b');
+        state.shake = .08;
+        return;
+      }
+      const lane = nearestLane(p.x);
+      deploy(PLAYER, selectedKey, lane, clamp(p.y, 458, 548));
+      state.energy -= selectedSpec.cost;
+      state.lastDeploy = state.time;
+      toast(selectedSpec.name + ' dropped ' + LANE_NAMES[lane] + '.', 1.1);
+      state.shake = .04;
+      return;
+    }
+
+    if (p.y > FIELD.top && p.y < FIELD.bottom) {
+      toast('Tap lower half of the arena to deploy. Enemy half is locked.', 1.4);
+      popText(p.x, p.y, 'Your half only', '#ffd76a');
+    }
   }
 
-  function showMenu(){
-    const b = currentBattle();
-    overlay.classList.remove('hidden');
-    modal.innerHTML = '';
-    const div = document.createElement('div');
-    div.innerHTML =
-      '<div class="logo">👻 Nightmare Park<span>MONSTER ROYALE</span></div>' +
-      '<p><strong>V10 root index build.</strong> This is the actual live page replacement, not a side folder, not Unity admin, not a redirect guessing game.</p>' +
-      '<div class="progress-grid">' +
-        '<div class="progress-cell"><div class="progress-num">' + progress.goblinLevel + '</div><div class="progress-label">Goblin Level</div></div>' +
-        '<div class="progress-cell"><div class="progress-num">' + progress.wins + '</div><div class="progress-label">Wins</div></div>' +
-        '<div class="progress-cell"><div class="progress-num">' + progress.skulls + '</div><div class="progress-label">Skulls</div></div>' +
-      '</div>' +
-      '<p><strong>' + b.name + '</strong><br/>' + b.sub + '</p>' +
-      '<p>Deploy Grave Goblins in your half. They auto path, fight, stab towers, and push the enemy gate. Candle Imps are enemies for now.</p>';
-    const start = document.createElement('button');
-    start.className = 'big-btn';
-    start.textContent = 'START BATTLE';
-    start.addEventListener('click', newGame);
-    const reset = document.createElement('button');
-    reset.className = 'ghost-btn';
-    reset.textContent = 'Reset saved progress';
-    reset.addEventListener('click', () => {
-      progress = defaultProgress();
-      saveProgress();
-      showMenu();
-    });
-    modal.appendChild(div);
-    modal.appendChild(start);
-    modal.appendChild(reset);
-    battleNameEl.textContent = 'Arena One: Haunted Midway';
-    battleSubEl.textContent = 'V10 live build loaded from root index.html';
+  function screenToGame(x, y) {
+    return { x: (x - offX) / scale, y: (y - offY) / scale };
   }
 
-  function showReward(){
-    const battle = currentBattle();
-    progress.wins += 1;
-    progress.skulls += battle.reward;
-    progress.goblinLevel += 1;
-    const nextBattle = Math.min(progress.battle + 1, battles.length + 7);
-    progress.battle = nextBattle;
-    saveProgress();
-
-    overlay.classList.remove('hidden');
-    const rewards = [
-      { key:'damage', title:'Sharper Bone', desc:'+12% Grave Goblin stab damage. Makes swarms crack towers faster.' },
-      { key:'speed', title:'Quick Scuttle', desc:'+10% movement speed. More goblins reach the fight alive.' },
-      { key:'hp', title:'Grave Grit', desc:'+14% health. Goblins survive tower shots longer.' }
-    ];
-    modal.innerHTML = '<div class="logo">VICTORY 🦴<span>CHOOSE A GOBLIN UPGRADE</span></div>' +
-      '<p>You smashed the gate and earned <strong>' + battle.reward + ' skulls</strong>. This is the replay loop: battle, upgrade, tougher wave.</p>' +
-      '<div class="reward-list" id="rewardList"></div>';
-    const list = modal.querySelector('#rewardList');
-    rewards.forEach(r => {
-      const btn = document.createElement('button');
-      btn.className = 'reward-btn';
-      btn.innerHTML = '<div class="reward-title">' + r.title + '</div><div class="reward-desc">' + r.desc + '</div>';
-      btn.addEventListener('click', () => {
-        progress.upgrades[r.key] += 1;
-        saveProgress();
-        showMenu();
-      });
-      list.appendChild(btn);
-    });
+  function nearestLane(x) {
+    let best = 0, dist = Infinity;
+    for (let i = 0; i < LANES.length; i++) {
+      const d = Math.abs(x - LANES[i]);
+      if (d < dist) { dist = d; best = i; }
+    }
+    return best;
   }
 
-  function showDefeat(){
-    overlay.classList.remove('hidden');
-    modal.innerHTML = '<div class="logo">DEFEAT 💀<span>THE PARK BIT BACK</span></div>' +
-      '<p>Your gate fell. No progress lost. Try flooding one lane with Grave Goblins, then switch lane once a tower locks on.</p>';
-    const retry = document.createElement('button');
-    retry.className = 'big-btn';
-    retry.textContent = 'RETRY BATTLE';
-    retry.addEventListener('click', newGame);
-    const menu = document.createElement('button');
-    menu.className = 'ghost-btn';
-    menu.textContent = 'Back to menu';
-    menu.addEventListener('click', showMenu);
-    modal.appendChild(retry);
-    modal.appendChild(menu);
+  function deploy(team, key, lane, y) {
+    if (key === 'batSwarm') {
+      for (let i = 0; i < 3; i++) {
+        spawnUnit(team, key, lane, y + (i - 1) * 12, (i - 1) * 11);
+      }
+      burst(LANES[lane], y, team === PLAYER ? '#c59cff' : '#ff7a7a', 18, .7);
+    } else {
+      spawnUnit(team, key, lane, y, 0);
+      burst(LANES[lane], y, team === PLAYER ? '#79ff6a' : '#ff5b58', 16, .7);
+    }
   }
 
-  function showToast(text, ms){
-    messageEl.textContent = text;
-    toastUntil = performance.now() + (ms || 1600);
-  }
-
-  function spawnUnit(team, type, x, y){
-    const scale = team === 'enemy' ? endlessScale() : 1;
-    const up = progress.upgrades;
-    let u = {
-      id: Math.random().toString(36).slice(2), team, type, x, y,
-      vx:0, vy:0, r:13, hp:80, maxHp:80, dmg:10, range:18, atk:.58, attackTimer:0,
-      speed:42, dead:false, bob:Math.random()*6.28
+  function spawnUnit(team, key, lane, y, xOffset) {
+    const s = specs[key];
+    const u = {
+      id: unitId++, team, key, lane,
+      x: LANES[lane] + xOffset + (rand() - .5) * 5,
+      y,
+      hp: s.hp,
+      maxHp: s.hp,
+      speed: s.speed * (team === PLAYER ? -1 : 1),
+      dmg: s.dmg,
+      range: s.range,
+      cooldown: s.cooldown,
+      cd: rand() * .35,
+      radius: s.radius,
+      attackFlash: 0,
+      hurt: 0,
+      bob: rand() * Math.PI * 2,
+      dying: false
     };
-    if(type === 'graveGoblin'){
-      const hpMul = 1 + up.hp * .14;
-      const dmgMul = 1 + up.damage * .12;
-      const spdMul = 1 + up.speed * .10;
-      u.r = 13;
-      u.maxHp = Math.round((86 + progress.goblinLevel * 4) * hpMul);
-      u.hp = u.maxHp;
-      u.dmg = Math.round((13 + progress.goblinLevel * 1.2) * dmgMul);
-      u.speed = 58 * spdMul;
-      u.range = 20;
-      u.atk = .46;
-    }
-    if(type === 'enemyGoblin'){
-      u.r = 12; u.maxHp = Math.round(66 * scale); u.hp = u.maxHp; u.dmg = 8.5 * scale; u.speed = 43; u.range = 18; u.atk = .62;
-    }
-    if(type === 'enemyBruiser'){
-      u.r = 17; u.maxHp = Math.round(145 * scale); u.hp = u.maxHp; u.dmg = 17 * scale; u.speed = 30; u.range = 22; u.atk = .82;
-    }
-    if(type === 'candleImp'){
-      u.r = 11; u.maxHp = Math.round(48 * scale); u.hp = u.maxHp; u.dmg = 6.5 * scale; u.speed = 34; u.range = 104; u.atk = .98;
-    }
-    game.units.push(u);
-    puff(x, y, team === 'player' ? '#7cff9b' : '#ff8f70', 8);
+    state.units.push(u);
     return u;
   }
 
-  function spawnWave(wave){
-    const lanes = [W*.28, W*.5, W*.72];
-    let index = 0;
-    wave.items.forEach(pair => {
-      const type = pair[0];
-      const count = pair[1];
-      for(let i=0;i<count;i++){
-        const lane = lanes[(index + i) % lanes.length] + rand(-18, 18);
-        const y = 210 + rand(-16, 18);
-        setTimeout(() => { if(game && game.phase === 'battle') spawnUnit('enemy', type, lane, y); }, index * 260);
-        index += 1;
-      }
-    });
-    showToast('Enemy wave incoming!', 1300);
-  }
+  function update(dt) {
+    state.time += dt;
+    state.shake = Math.max(0, state.shake - dt);
+    state.flash = Math.max(0, state.flash - dt);
+    state.toastTimer = Math.max(0, state.toastTimer - dt);
 
-  function deployAt(x, y){
-    if(!game || game.phase !== 'battle') return;
-    const cost = 2;
-    if(!validDeploy(x, y)){
-      showToast('Deploy in your half, above the card hand.', 1200);
-      shell.classList.remove('shake'); void shell.offsetWidth; shell.classList.add('shake');
+    if (state.over) {
+      updateParticles(dt);
+      updateTexts(dt);
       return;
     }
-    if(game.energy < cost){
-      showToast('Not enough energy yet.', 900);
-      shell.classList.remove('shake'); void shell.offsetWidth; shell.classList.add('shake');
-      return;
-    }
-    game.energy -= cost;
-    spawnUnit('player', 'graveGoblin', x, y);
-    showToast('Grave Goblin deployed.', 700);
-  }
 
-  function validDeploy(x,y){
-    const bottomLimit = H - 142 - Math.max(0, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)')) || 0);
-    return y > H * .55 && y < bottomLimit && x > 22 && x < W - 22;
-  }
-
-  function nearestEnemyUnit(unit){
-    let best = null;
-    let bd = Infinity;
-    for(const other of game.units){
-      if(other.dead || other.team === unit.team) continue;
-      const d = dist2(unit.x, unit.y, other.x, other.y);
-      if(d < bd){ bd = d; best = other; }
-    }
-    return best;
-  }
-
-  function nearestEnemyStructure(unit){
-    let best = null;
-    let bd = Infinity;
-    for(const s of game.structures){
-      if(s.dead || s.hp <= 0 || s.team === unit.team) continue;
-      const d = dist2(unit.x, unit.y, s.x, s.y);
-      if(d < bd){ bd = d; best = s; }
-    }
-    return best;
-  }
-
-  function update(dt){
-    if(!game || game.phase !== 'battle') return;
-    game.time += dt;
-    game.cameraShake = Math.max(0, game.cameraShake - dt * 18);
-
-    const energyRate = game.time > 65 ? 1.75 : 1.05;
-    game.energy = Math.min(10, game.energy + dt * energyRate);
-
-    const battle = currentBattle();
-    battle.waves.forEach((wave, i) => {
-      if(!game.spawned[i] && game.time >= wave.t){
-        game.spawned[i] = true;
-        spawnWave(wave);
-      }
-    });
-
+    state.energy = Math.min(state.maxEnergy, state.energy + dt * .88);
+    updateEnemyWaves(dt);
+    updateTowers(dt);
     updateUnits(dt);
-    updateStructures(dt);
     updateProjectiles(dt);
     updateParticles(dt);
-    cleanup();
-    checkOutcome();
+    updateTexts(dt);
+    cleanupDead();
+    checkEnd();
   }
 
-  function updateUnits(dt){
-    for(const u of game.units){
-      if(u.dead) continue;
-      u.attackTimer -= dt;
-      u.bob += dt * 9;
-      let target = nearestEnemyUnit(u);
-      if(!target) target = nearestEnemyStructure(u);
-      if(!target) continue;
-      const tx = target.x;
-      const ty = target.y;
-      const tr = target.r || 18;
-      const dx = tx - u.x;
-      const dy = ty - u.y;
-      const d = Math.max(.001, Math.sqrt(dx*dx + dy*dy));
-      const wanted = u.range + tr * .7;
-      if(d > wanted){
-        const laneBias = bridgeBias(u, target);
-        u.x += (dx / d) * u.speed * dt + laneBias.x * dt;
-        u.y += (dy / d) * u.speed * dt + laneBias.y * dt;
-        u.x = clamp(u.x, 16, W-16);
-        u.y = clamp(u.y, 74, H-150);
-      } else if(u.attackTimer <= 0){
-        u.attackTimer = u.atk;
-        if(u.type === 'candleImp'){
-          game.projectiles.push({ x:u.x, y:u.y, tx:target.x, ty:target.y, targetId:target.id, team:u.team, dmg:u.dmg, life:.7, maxLife:.7, color:'#ffb347', r:4 });
-          puff(u.x, u.y-8, '#ffb347', 4);
+  function updateEnemyWaves(dt) {
+    state.waveTimer -= dt;
+    if (state.waveTimer > 0) return;
+
+    const lane = Math.floor(rand() * 3);
+    const roll = rand();
+    if (state.wave < 3) {
+      deploy(ENEMY, 'candleImp', lane, 252);
+      popText(LANES[lane], 228, 'Enemy Imp!', '#ffb43f');
+    } else if (roll < .52) {
+      deploy(ENEMY, 'candleImp', lane, 252);
+      if (rand() < .25) deploy(ENEMY, 'candleImp', (lane + 1) % 3, 252);
+    } else if (roll < .78) {
+      deploy(ENEMY, 'graveGoblin', lane, 252);
+    } else {
+      deploy(ENEMY, 'boneBrute', lane, 246);
+      popText(LANES[lane], 225, 'Bone Brute!', '#e7ddc2');
+    }
+
+    state.wave++;
+    const pressure = Math.min(1.6, state.time / 90);
+    state.waveTimer = Math.max(2.05, 4.4 - pressure + rand() * 1.15);
+  }
+
+  function updateTowers(dt) {
+    for (const t of state.towers) {
+      if (t.hp <= 0) continue;
+      t.cd -= dt;
+      t.hit = Math.max(0, t.hit - dt * 3);
+      if (t.cd > 0) continue;
+
+      let target = null;
+      let best = Infinity;
+      for (const u of state.units) {
+        if (u.team === t.team || u.hp <= 0) continue;
+        const d = distance(t.x, t.y, u.x, u.y);
+        if (d < t.range && d < best) { target = u; best = d; }
+      }
+      if (target) {
+        shoot(t, target, t.dmg, t.team === PLAYER ? '#92fff2' : '#ff5b6e', 250, 'bolt');
+        t.cd = t.cooldown;
+      }
+    }
+  }
+
+  function updateUnits(dt) {
+    for (const u of state.units) {
+      if (u.hp <= 0) continue;
+      const s = specs[u.key];
+      u.cd -= dt;
+      u.attackFlash = Math.max(0, u.attackFlash - dt * 4.5);
+      u.hurt = Math.max(0, u.hurt - dt * 3);
+      u.bob += dt * (u.key === 'batSwarm' ? 12 : 6);
+      u.x += (LANES[u.lane] - u.x) * Math.min(1, dt * 5);
+
+      const unitTarget = findUnitTarget(u);
+      if (unitTarget) {
+        const d = distance(u.x, u.y, unitTarget.x, unitTarget.y);
+        const required = u.range + unitTarget.radius;
+        if (d > required) {
+          const dir = Math.sign(unitTarget.y - u.y) || Math.sign(u.speed);
+          u.y += dir * Math.abs(u.speed) * dt * .85;
+        } else if (u.cd <= 0) {
+          unitAttack(u, unitTarget);
+        }
+        continue;
+      }
+
+      const tw = preferredTowerTarget(u);
+      if (tw) {
+        const d = distance(u.x, u.y, tw.x, tw.y);
+        const required = u.range + tw.radius - 2;
+        if (d <= required) {
+          if (u.cd <= 0) unitAttack(u, tw);
         } else {
-          damage(target, u.dmg, u);
-          slash(u.x, u.y, target.x, target.y, u.team === 'player' ? '#dfff9d' : '#ff8f70');
+          u.y += u.speed * dt;
+        }
+      } else {
+        u.y += u.speed * dt;
+      }
+    }
+  }
+
+  function findUnitTarget(u) {
+    let target = null, best = Infinity;
+    for (const v of state.units) {
+      if (v.team === u.team || v.hp <= 0) continue;
+      const sameLane = v.lane === u.lane;
+      const laneAdj = Math.abs(v.x - u.x) < 55;
+      if (!sameLane && !laneAdj) continue;
+      const d = distance(u.x, u.y, v.x, v.y);
+      const aggro = u.key === 'candleImp' ? 118 : 52;
+      if (d < aggro && d < best) { target = v; best = d; }
+    }
+    return target;
+  }
+
+  function preferredTowerTarget(u) {
+    const enemies = state.towers.filter(t => t.team !== u.team && t.hp > 0);
+    if (!enemies.length) return null;
+    const core = enemies.find(t => t.kind === 'core');
+    const side = enemies.find(t => t.lane === u.lane && t.kind === 'side');
+    if (u.lane === 1) return core || side || enemies[0];
+    return side || core || enemies[0];
+  }
+
+  function unitAttack(u, target) {
+    const s = specs[u.key];
+    u.cd = u.cooldown;
+    u.attackFlash = 1;
+    if (s.type === 'ranged') {
+      shoot(u, target, u.dmg, u.team === PLAYER ? '#ffda73' : '#ff873f', 210, 'flame');
+    } else {
+      const dmg = u.dmg + (rand() < .09 ? Math.round(u.dmg * .65) : 0);
+      damage(target, dmg, u.team, u.x, u.y, s.tint);
+      slash(u, target, s.tint);
+    }
+  }
+
+  function shoot(source, target, dmg, color, speed, kind) {
+    state.projectiles.push({
+      x: source.x,
+      y: source.y - (source.kind === 'core' ? 8 : 0),
+      tx: target.x,
+      ty: target.y,
+      target,
+      dmg,
+      team: source.team,
+      color,
+      speed,
+      kind,
+      life: 2
+    });
+    const pCol = kind === 'flame' ? '#ffb43f' : color;
+    burst(source.x, source.y, pCol, 3, .22);
+  }
+
+  function updateProjectiles(dt) {
+    for (const p of state.projectiles) {
+      p.life -= dt;
+      if (p.target && p.target.hp > 0) {
+        p.tx = p.target.x;
+        p.ty = p.target.y;
+      }
+      const d = distance(p.x, p.y, p.tx, p.ty);
+      if (d < 8 || p.life <= 0) {
+        if (p.target && p.target.hp > 0) damage(p.target, p.dmg, p.team, p.x, p.y, p.color);
+        burst(p.x, p.y, p.color, p.kind === 'flame' ? 9 : 5, .35);
+        p.life = -1;
+      } else {
+        const step = p.speed * dt;
+        p.x += (p.tx - p.x) / d * step;
+        p.y += (p.ty - p.y) / d * step;
+        if (rand() < .55) {
+          state.particles.push({ x: p.x, y: p.y, vx: (rand()-.5)*12, vy: (rand()-.5)*12, r: p.kind === 'flame' ? 3 : 2, life: .22, max: .22, color: p.color });
         }
       }
     }
+    state.projectiles = state.projectiles.filter(p => p.life > 0);
   }
 
-  function bridgeBias(u, target){
-    const riverY = H * .47;
-    if(Math.abs(u.y - riverY) > 85) return {x:0,y:0};
-    const bridges = [W*.34, W*.66];
-    const nearestBridge = Math.abs(u.x - bridges[0]) < Math.abs(u.x - bridges[1]) ? bridges[0] : bridges[1];
-    return { x:(nearestBridge - u.x) * .55, y:0 };
-  }
-
-  function updateStructures(dt){
-    for(const s of game.structures){
-      if(s.dead || s.kind !== 'tower') continue;
-      s.attackTimer -= dt;
-      if(s.attackTimer > 0) continue;
-      let target = null;
-      let bd = Infinity;
-      for(const u of game.units){
-        if(u.dead || u.team === s.team) continue;
-        const d = dist2(s.x, s.y, u.x, u.y);
-        if(d < s.range*s.range && d < bd){ bd=d; target=u; }
+  function damage(obj, amount, sourceTeam, x, y, color) {
+    obj.hp -= amount;
+    obj.hit = 1;
+    obj.hurt = 1;
+    popText(obj.x || x, (obj.y || y) - 18, '-' + amount, color || '#fff');
+    if (obj.kind) {
+      state.shake = Math.max(state.shake, .045);
+      if (obj.hp <= 0) {
+        burst(obj.x, obj.y, sourceTeam === PLAYER ? '#79ff6a' : '#ff5b6e', 34, .9);
+        popText(obj.x, obj.y - 32, obj.kind === 'core' ? 'CORE DOWN!' : 'TOWER DOWN!', '#ffd76a');
+        state.flash = .18;
       }
-      if(target){
-        s.attackTimer = s.cd;
-        game.projectiles.push({ x:s.x, y:s.y, tx:target.x, ty:target.y, targetId:target.id, team:s.team, dmg:s.dmg, life:.45, maxLife:.45, color:s.team === 'player' ? '#74d7ff' : '#ff5f73', r:3.5 });
-      }
+    } else if (obj.hp <= 0) {
+      burst(obj.x, obj.y, '#b7f3ff', 15, .45);
     }
   }
 
-  function updateProjectiles(dt){
-    for(const p of game.projectiles){
-      p.life -= dt;
-      const target = findById(p.targetId);
-      if(target && !target.dead){
-        p.tx = target.x; p.ty = target.y;
-      }
-      const t = 1 - Math.max(0, p.life) / p.maxLife;
-      p.cx = lerp(p.x, p.tx, easeOut(t));
-      p.cy = lerp(p.y, p.ty, easeOut(t)) - Math.sin(t * Math.PI) * 22;
-      if(p.life <= 0){
-        p.dead = true;
-        if(target && !target.dead) damage(target, p.dmg, null);
-        puff(p.tx, p.ty, p.color, 5);
-      }
+  function cleanupDead() {
+    state.units = state.units.filter(u => {
+      if (u.hp > 0) return true;
+      return false;
+    });
+  }
+
+  function checkEnd() {
+    const playerCore = state.towers.find(t => t.id === 'player-core');
+    const enemyCore = state.towers.find(t => t.id === 'enemy-core');
+    if (enemyCore.hp <= 0) {
+      state.over = 'VICTORY';
+      state.toastTimer = 0;
+      burst(enemyCore.x, enemyCore.y, '#79ff6a', 80, 1.4);
+    }
+    if (playerCore.hp <= 0) {
+      state.over = 'DEFEAT';
+      state.toastTimer = 0;
+      burst(playerCore.x, playerCore.y, '#ff5b6e', 80, 1.4);
     }
   }
 
-  function updateParticles(dt){
-    for(const p of game.particles){
+  function updateParticles(dt) {
+    for (const p of state.particles) {
       p.life -= dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vy += 25 * dt;
+      p.vy += 8 * dt;
+      p.r *= (1 + dt * .18);
     }
+    state.particles = state.particles.filter(p => p.life > 0);
   }
 
-  function findById(id){
-    for(const u of game.units) if(u.id === id) return u;
-    for(const s of game.structures) if(s.id === id) return s;
-    return null;
-  }
-
-  function damage(target, amount, source){
-    if(!target || target.dead) return;
-    target.hp -= amount;
-    if(target.hp <= 0){
-      target.hp = 0;
-      target.dead = true;
-      game.cameraShake = Math.max(game.cameraShake, target.kind ? 7 : 3);
-      puff(target.x, target.y, target.team === 'player' ? '#74d7ff' : '#ff8f70', target.kind ? 22 : 12);
-      if(target.kind === 'tower') showToast((target.team === 'enemy' ? 'Enemy' : 'Your') + ' tower destroyed!', 1000);
-    } else {
-      puff(target.x, target.y, target.team === 'player' ? '#74d7ff' : '#ff5f73', 3);
+  function updateTexts(dt) {
+    for (const t of state.texts) {
+      t.life -= dt;
+      t.y -= 24 * dt;
+      t.x += Math.sin((1 - t.life) * 9) * dt * 8;
     }
+    state.texts = state.texts.filter(t => t.life > 0);
   }
 
-  function cleanup(){
-    game.units = game.units.filter(u => !u.dead || u.hp > 0 && u.y > -50 && u.y < H+50);
-    game.projectiles = game.projectiles.filter(p => !p.dead);
-    game.particles = game.particles.filter(p => p.life > 0);
-  }
+  function render() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#050309';
+    ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
-  function checkOutcome(){
-    const enemyCore = game.structures.find(s => s.id === 'enemyCore');
-    const playerCore = game.structures.find(s => s.id === 'playerCore');
-    if(enemyCore && enemyCore.dead){
-      game.phase = 'ended';
-      setTimeout(showReward, 650);
-    } else if(playerCore && playerCore.dead){
-      game.phase = 'ended';
-      setTimeout(showDefeat, 650);
+    let sx = 0, sy = 0;
+    if (state.shake > 0) {
+      sx = (rand() - .5) * state.shake * 42;
+      sy = (rand() - .5) * state.shake * 42;
     }
-  }
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * (offX + sx), dpr * (offY + sy));
 
-  function draw(){
-    ctx.save();
-    ctx.clearRect(0,0,W,H);
-    if(game && game.cameraShake > 0){
-      ctx.translate(rand(-game.cameraShake, game.cameraShake), rand(-game.cameraShake, game.cameraShake));
-    }
+    drawPhoneFrame();
     drawArena();
-    if(game){
-      drawStructures();
-      drawUnits();
-      drawProjectiles();
-      drawParticles();
-      if(game.phase === 'battle' && pointer.active) drawDeployGhost();
-    }
-    ctx.restore();
-    drawHudValues();
+    drawDeploymentHint();
+    drawParticles(false);
+    drawTowers();
+    drawUnits();
+    drawProjectiles();
+    drawParticles(true);
+    drawTexts();
+    drawHUD();
+    if (state.flash > 0) drawFlash();
+    if (state.over) drawEndOverlay();
   }
 
-  function drawArena(){
-    const grd = ctx.createLinearGradient(0,0,0,H);
-    grd.addColorStop(0,'#111127');
-    grd.addColorStop(.22,'#171633');
-    grd.addColorStop(.5,'#0c1d18');
-    grd.addColorStop(.78,'#15152c');
-    grd.addColorStop(1,'#090915');
-    ctx.fillStyle = grd;
-    ctx.fillRect(0,0,W,H);
+  function drawPhoneFrame() {
+    const g = ctx.createLinearGradient(0, 0, 0, V.h);
+    g.addColorStop(0, '#0d0618');
+    g.addColorStop(.45, '#150b24');
+    g.addColorStop(1, '#090510');
+    ctx.fillStyle = g;
+    roundRect(8, 38, V.w - 16, V.h - 48, 26);
+    ctx.fill();
 
     ctx.save();
-    ctx.globalAlpha=.42;
-    ctx.fillStyle='#e9e0ff';
-    circle(W*.78, 82, 42);
-    ctx.globalAlpha=.16;
-    for(let i=0;i<28;i++){
-      ctx.fillStyle = i%2 ? '#b58cff' : '#7cff9b';
-      circle((i*71 + 19) % W, 80 + (i*97)%Math.max(1,H-230), 1.2 + (i%3));
-    }
+    ctx.globalAlpha = .55;
+    ctx.strokeStyle = '#3d235f';
+    ctx.lineWidth = 2;
+    roundRect(9, 39, V.w - 18, V.h - 50, 25);
+    ctx.stroke();
     ctx.restore();
-
-    drawTrees();
-    drawTiles();
-    drawRiver();
-    drawDeployZone();
   }
 
-  function drawTrees(){
+  function drawArena() {
     ctx.save();
-    ctx.globalAlpha=.55;
-    for(let i=0;i<9;i++){
-      const side = i%2 ? W-16 : 16;
-      const y = 130 + i*72;
-      ctx.strokeStyle='rgba(4,4,10,.9)';
-      ctx.lineWidth=8;
+    ctx.beginPath();
+    roundRect(FIELD.x, FIELD.y, FIELD.w, FIELD.h, 20);
+    ctx.clip();
+
+    const bg = ctx.createLinearGradient(0, FIELD.y, 0, FIELD.bottom);
+    bg.addColorStop(0, '#231138');
+    bg.addColorStop(.38, '#20152d');
+    bg.addColorStop(.5, '#10281e');
+    bg.addColorStop(.62, '#21162f');
+    bg.addColorStop(1, '#301a25');
+    ctx.fillStyle = bg;
+    ctx.fillRect(FIELD.x, FIELD.y, FIELD.w, FIELD.h);
+
+    drawGroundTexture();
+    drawLanes();
+    drawBases();
+    drawCursedRiver();
+    drawBridges();
+    drawDecor();
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,215,106,.35)';
+    ctx.lineWidth = 2;
+    roundRect(FIELD.x, FIELD.y, FIELD.w, FIELD.h, 20);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(121,255,106,.18)';
+    ctx.lineWidth = 6;
+    roundRect(FIELD.x + 3, FIELD.y + 3, FIELD.w - 6, FIELD.h - 6, 17);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawGroundTexture() {
+    ctx.save();
+    for (let i = 0; i < 95; i++) {
+      const x = FIELD.x + randFixed(i * 77) * FIELD.w;
+      const y = FIELD.y + randFixed(i * 43 + 2) * FIELD.h;
+      if (Math.abs(y - FIELD.mid) < 46) continue;
+      ctx.globalAlpha = .08 + randFixed(i * 11) * .07;
+      ctx.fillStyle = randFixed(i * 9) > .5 ? '#cab68c' : '#6d5b7d';
       ctx.beginPath();
-      ctx.moveTo(side,y+55); ctx.lineTo(side + (i%2?-26:26), y); ctx.stroke();
-      ctx.lineWidth=3;
-      for(let b=0;b<3;b++){
+      ctx.ellipse(x, y, 1 + randFixed(i) * 2.8, .6 + randFixed(i + 7) * 1.5, randFixed(i + 3) * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawLanes() {
+    ctx.save();
+    for (let i = 0; i < 3; i++) {
+      const x = LANES[i];
+      const g = ctx.createLinearGradient(x - 35, 0, x + 35, 0);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(.5, i === 1 ? 'rgba(255,215,106,.08)' : 'rgba(128,233,255,.055)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(x - 42, FIELD.y, 84, FIELD.h);
+      ctx.strokeStyle = 'rgba(255,255,255,.08)';
+      ctx.setLineDash([5, 9]);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, FIELD.y + 16);
+      ctx.lineTo(x, FIELD.bottom - 16);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawBases() {
+    ctx.save();
+    const enemyGrad = ctx.createLinearGradient(0, FIELD.y, 0, FIELD.y + 190);
+    enemyGrad.addColorStop(0, 'rgba(154,40,80,.55)');
+    enemyGrad.addColorStop(1, 'rgba(154,40,80,0)');
+    ctx.fillStyle = enemyGrad;
+    ctx.fillRect(FIELD.x, FIELD.y, FIELD.w, 205);
+
+    const playerGrad = ctx.createLinearGradient(0, FIELD.bottom - 210, 0, FIELD.bottom);
+    playerGrad.addColorStop(0, 'rgba(67,239,153,0)');
+    playerGrad.addColorStop(1, 'rgba(67,239,153,.42)');
+    ctx.fillStyle = playerGrad;
+    ctx.fillRect(FIELD.x, FIELD.bottom - 215, FIELD.w, 215);
+
+    ctx.globalAlpha = .8;
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.fillRect(FIELD.x, FIELD.y + 172, FIELD.w, 2);
+    ctx.fillRect(FIELD.x, FIELD.bottom - 172, FIELD.w, 2);
+    ctx.restore();
+  }
+
+  function drawCursedRiver() {
+    ctx.save();
+    const y = FIELD.mid;
+    const rg = ctx.createLinearGradient(0, y - 32, 0, y + 32);
+    rg.addColorStop(0, 'rgba(42,126,83,.22)');
+    rg.addColorStop(.5, 'rgba(121,255,106,.72)');
+    rg.addColorStop(1, 'rgba(42,126,83,.22)');
+    ctx.fillStyle = rg;
+    ctx.beginPath();
+    ctx.moveTo(FIELD.x, y - 30);
+    for (let x = FIELD.x; x <= FIELD.x + FIELD.w; x += 14) {
+      ctx.lineTo(x, y - 28 + Math.sin((x + state.time * 28) * .045) * 7);
+    }
+    ctx.lineTo(FIELD.x + FIELD.w, y + 31);
+    for (let x = FIELD.x + FIELD.w; x >= FIELD.x; x -= 14) {
+      ctx.lineTo(x, y + 28 + Math.sin((x - state.time * 30) * .052) * 7);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 6; i++) {
+      ctx.globalAlpha = .14;
+      ctx.strokeStyle = i % 2 ? '#79ff6a' : '#80e9ff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = FIELD.x - 5; x <= FIELD.x + FIELD.w + 5; x += 9) {
+        const yy = y + Math.sin((x * .04) + state.time * (1.2 + i * .2) + i) * (9 + i);
+        if (x === FIELD.x - 5) ctx.moveTo(x, yy);
+        else ctx.lineTo(x, yy);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawBridges() {
+    ctx.save();
+    for (const x of LANES) {
+      ctx.fillStyle = '#5b3927';
+      roundRect(x - 28, FIELD.mid - 42, 56, 84, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#9c6b42';
+      ctx.lineWidth = 2;
+      roundRect(x - 28, FIELD.mid - 42, 56, 84, 8);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,.35)';
+      ctx.lineWidth = 1;
+      for (let yy = FIELD.mid - 34; yy < FIELD.mid + 38; yy += 13) {
         ctx.beginPath();
-        ctx.moveTo(side + (i%2?-18:18), y+14+b*10);
-        ctx.lineTo(side + (i%2?-52-rand(0,0):52), y-4+b*13);
+        ctx.moveTo(x - 24, yy + Math.sin(yy) * 1);
+        ctx.lineTo(x + 24, yy + Math.cos(yy) * 1);
         ctx.stroke();
       }
+      ctx.globalAlpha = .26;
+      ctx.fillStyle = '#79ff6a';
+      ctx.beginPath();
+      ctx.ellipse(x, FIELD.mid, 38, 54, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
     ctx.restore();
   }
 
-  function drawTiles(){
+  function drawDecor() {
     ctx.save();
-    ctx.globalAlpha=.22;
-    ctx.strokeStyle='rgba(255,255,255,.14)';
-    ctx.lineWidth=1;
-    for(let y=118; y<H-140; y+=52){
-      ctx.beginPath(); ctx.moveTo(24,y); ctx.lineTo(W-24,y); ctx.stroke();
+    for (const d of decor) {
+      if (d.kind === 'grave') drawGrave(d.x, d.y, d.s, d.flip);
+      if (d.kind === 'pumpkin') drawPumpkin(d.x, d.y, d.s);
+      if (d.kind === 'tree') drawTree(d.x, d.y, d.s);
+      if (d.kind === 'tent') drawTent(d.x, d.y, d.s);
     }
-    for(let x=48; x<W; x+=56){
-      ctx.beginPath(); ctx.moveTo(x,106); ctx.lineTo(x,H-148); ctx.stroke();
+    drawMoon(330, 104, 26);
+    ctx.restore();
+  }
+
+  function drawDeploymentHint() {
+    if (state.selected == null || state.over) return;
+    const key = cards[state.selected];
+    const enough = state.energy >= specs[key].cost;
+    ctx.save();
+    ctx.globalAlpha = enough ? .34 + Math.sin(state.time * 5) * .08 : .12;
+    ctx.fillStyle = enough ? '#79ff6a' : '#ff5b6e';
+    for (let i = 0; i < 3; i++) {
+      roundRect(LANES[i] - 45, FIELD.mid + 36, 90, FIELD.bottom - FIELD.mid - 56, 18);
+      ctx.fill();
+    }
+    ctx.globalAlpha = .9;
+    ctx.font = '900 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = enough ? '#dfffd8' : '#ffd1d1';
+    for (let i = 0; i < 3; i++) {
+      ctx.fillText('DROP ' + LANE_NAMES[i], LANES[i], FIELD.bottom - 32);
     }
     ctx.restore();
   }
 
-  function drawRiver(){
-    const y = H*.47;
+  function drawTowers() {
+    const ordered = state.towers.slice().sort((a,b) => a.y - b.y);
+    for (const t of ordered) drawTower(t);
+  }
+
+  function drawTower(t) {
+    const alive = t.hp > 0;
+    const teamCol = t.team === PLAYER ? '#79ff6a' : '#ff5b6e';
+    const darkCol = t.team === PLAYER ? '#163a2a' : '#3b1421';
+    const x = t.x, y = t.y;
     ctx.save();
-    const g = ctx.createLinearGradient(0,y-34,0,y+34);
-    g.addColorStop(0,'rgba(25,255,135,.05)');
-    g.addColorStop(.5,'rgba(69,255,146,.38)');
-    g.addColorStop(1,'rgba(25,255,135,.05)');
-    ctx.fillStyle=g;
-    ctx.fillRect(0,y-34,W,68);
-    ctx.globalAlpha=.7;
-    ctx.strokeStyle='rgba(124,255,155,.55)';
-    ctx.lineWidth=2;
+    ctx.globalAlpha = alive ? 1 : .38;
+
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
     ctx.beginPath();
-    for(let x=0;x<=W;x+=18){
-      const yy = y + Math.sin((x + performance.now()*.04)*.04)*8;
-      if(x===0) ctx.moveTo(x,yy); else ctx.lineTo(x,yy);
-    }
-    ctx.stroke();
-    [W*.34,W*.66].forEach(bx => {
-      ctx.fillStyle='rgba(77,45,28,.92)';
-      roundRect(bx-34,y-45,68,90,12,true,false);
-      ctx.strokeStyle='rgba(255,209,102,.25)';
-      ctx.lineWidth=2;
-      roundRect(bx-34,y-45,68,90,12,false,true);
-    });
-    ctx.restore();
-  }
+    ctx.ellipse(x, y + 26, t.radius + 10, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-  function drawDeployZone(){
-    const top = H*.55;
-    const bottom = H-142;
-    ctx.save();
-    ctx.fillStyle='rgba(116,215,255,.055)';
-    ctx.fillRect(0,top,W,bottom-top);
-    ctx.strokeStyle='rgba(116,215,255,.16)';
-    ctx.setLineDash([8,8]);
-    ctx.strokeRect(18,top+8,W-36,bottom-top-18);
-    ctx.setLineDash([]);
-    ctx.globalAlpha=.7;
-    ctx.fillStyle='rgba(255,255,255,.24)';
-    ctx.font='900 11px system-ui';
-    ctx.textAlign='center';
-    ctx.fillText('YOUR DEPLOYMENT HALF', W/2, top+25);
-    ctx.restore();
-  }
-
-  function drawStructures(){
-    for(const s of game.structures){
-      const pct = s.hp / Math.max(1, s.maxHp);
-      ctx.save();
-      ctx.globalAlpha = s.dead ? .35 : 1;
-      const enemy = s.team === 'enemy';
-      ctx.fillStyle = enemy ? '#4d263e' : '#1d4360';
-      ctx.strokeStyle = enemy ? '#ff8f70' : '#74d7ff';
-      ctx.lineWidth = 2;
-      if(s.kind === 'core'){
-        drawGate(s.x, s.y, enemy, s.dead);
-      } else {
-        drawTower(s.x, s.y, enemy, s.dead);
-      }
-      drawHealth(s.x, s.y - (s.kind === 'core' ? 44 : 36), 58, pct, enemy ? '#ff5f73' : '#74d7ff');
+    if (!alive) {
+      ctx.fillStyle = '#2b2630';
+      drawRubble(x, y, t.radius);
       ctx.restore();
+      return;
     }
-  }
 
-  function drawGate(x,y,enemy,dead){
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.fillStyle = enemy ? '#351f35' : '#17344c';
-    ctx.strokeStyle = enemy ? '#ff8f70' : '#74d7ff';
-    roundRect(-38,-28,76,58,12,true,true);
-    ctx.fillStyle = enemy ? '#1b0d18' : '#071a27';
-    roundRect(-20,-15,40,43,10,true,false);
-    ctx.fillStyle = dead ? '#222' : (enemy ? '#ffd166' : '#7cff9b');
-    circle(0,-35,8);
-    ctx.fillStyle='rgba(255,255,255,.25)';
-    ctx.font='900 10px system-ui'; ctx.textAlign='center';
-    ctx.fillText(enemy ? 'ENEMY' : 'YOUR',0,4);
-    ctx.restore();
-  }
+    const pulse = t.hit > 0 ? 1 + t.hit * .06 : 1;
+    ctx.translate(x, y);
+    ctx.scale(pulse, pulse);
+    ctx.translate(-x, -y);
 
-  function drawTower(x,y,enemy,dead){
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.fillStyle = enemy ? '#52223b' : '#1f4b68';
-    ctx.strokeStyle = enemy ? '#ff8f70' : '#74d7ff';
-    roundRect(-25,-22,50,47,10,true,true);
-    ctx.fillStyle = enemy ? '#ff8f70' : '#74d7ff';
-    ctx.globalAlpha = dead ? .4 : .9;
-    circle(0,-25,8);
+    ctx.fillStyle = darkCol;
+    roundRect(x - t.radius, y - 18, t.radius * 2, 48, 7);
+    ctx.fill();
+
+    ctx.fillStyle = teamCol;
+    ctx.globalAlpha = .2;
+    ctx.beginPath();
+    ctx.ellipse(x, y + 4, t.radius + 12, t.radius + 10, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.globalAlpha = 1;
-    ctx.fillStyle='rgba(0,0,0,.25)';
-    ctx.fillRect(-17,-4,34,23);
-    ctx.restore();
-  }
 
-  function drawUnits(){
-    const sorted = game.units.slice().sort((a,b)=>a.y-b.y);
-    for(const u of sorted){
-      if(u.dead) continue;
-      ctx.save();
-      ctx.translate(u.x, u.y);
-      drawShadow(0, u.r + 7, u.r + 9);
-      const bounce = Math.sin(u.bob) * 2;
-      ctx.translate(0,bounce);
-      if(u.type === 'graveGoblin') drawGraveGoblin(u);
-      else if(u.type === 'candleImp') drawCandleImp(u);
-      else if(u.type === 'enemyBruiser') drawBruiser(u);
-      else drawEnemyGoblin(u);
-      ctx.restore();
-      drawHealth(u.x, u.y - u.r - 18, 36, u.hp/u.maxHp, u.team === 'player' ? '#7cff9b' : '#ff5f73');
-    }
-  }
-
-  function drawGraveGoblin(u){
-    ctx.strokeStyle='#dfff9d'; ctx.lineWidth=3; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(7,-2); ctx.lineTo(20,-11); ctx.stroke();
-    ctx.fillStyle='#68d47a'; circle(0,0,13);
-    ctx.fillStyle='#9cff9f'; circle(-5,-5,5); circle(5,-4,5);
-    ctx.fillStyle='#101'; circle(-5,-5,2); circle(5,-4,2);
-    ctx.fillStyle='#2c763f'; circle(-9,8,4); circle(9,8,4);
-    ctx.fillStyle='#f7ffe8';
-    triangle(-3,3,0,9,3,3);
-    ctx.strokeStyle='#295c35'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(-8,12); ctx.lineTo(-13,18); ctx.moveTo(8,12); ctx.lineTo(13,18); ctx.stroke();
-  }
-
-  function drawEnemyGoblin(u){
-    ctx.strokeStyle='#ff8f70'; ctx.lineWidth=3; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(-7,-2); ctx.lineTo(-19,-10); ctx.stroke();
-    ctx.fillStyle='#8c446d'; circle(0,0,12);
-    ctx.fillStyle='#ffb3a6'; circle(-5,-5,4); circle(5,-4,4);
-    ctx.fillStyle='#18050b'; circle(-5,-5,2); circle(5,-4,2);
-    ctx.fillStyle='#32162a'; circle(-9,8,4); circle(9,8,4);
-  }
-
-  function drawBruiser(u){
-    ctx.fillStyle='#66345e'; circle(0,0,17);
-    ctx.fillStyle='#30102d'; circle(-12,8,5); circle(12,8,5);
-    ctx.fillStyle='#ffcf76'; circle(-6,-6,4); circle(6,-6,4);
-    ctx.fillStyle='#000'; circle(-6,-6,2); circle(6,-6,2);
-    ctx.strokeStyle='#ff8f70'; ctx.lineWidth=5; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(10,-3); ctx.lineTo(22,10); ctx.stroke();
-  }
-
-  function drawCandleImp(u){
-    ctx.fillStyle='#fff1c2'; roundRect(-8,-10,16,24,7,true,false);
-    ctx.fillStyle='#ff8f70'; circle(0,-14,8);
-    ctx.fillStyle='#ffd166'; circle(0,-16,4);
-    ctx.fillStyle='#3b1721'; circle(-4,-3,2); circle(4,-3,2);
-    ctx.strokeStyle='#ffb347'; ctx.lineWidth=2; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(8,2); ctx.lineTo(17,8); ctx.stroke();
-  }
-
-  function drawProjectiles(){
-    for(const p of game.projectiles){
-      ctx.save();
-      ctx.globalAlpha = .95;
-      ctx.fillStyle = p.color;
-      circle(p.cx || p.x, p.cy || p.y, p.r || 4);
-      ctx.globalAlpha = .25;
-      circle(p.cx || p.x, p.cy || p.y, (p.r || 4) * 2.5);
-      ctx.restore();
-    }
-  }
-
-  function drawParticles(){
-    for(const p of game.particles){
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-      ctx.fillStyle = p.color;
-      circle(p.x,p.y,p.r);
-      ctx.restore();
-    }
-  }
-
-  function drawDeployGhost(){
-    const ok = validDeploy(pointer.x, pointer.y) && game.energy >= 2;
-    ctx.save();
-    ctx.globalAlpha=.85;
-    ctx.strokeStyle = ok ? '#7cff9b' : '#ff5f73';
-    ctx.fillStyle = ok ? 'rgba(124,255,155,.16)' : 'rgba(255,95,115,.13)';
-    ctx.lineWidth=3;
-    circle(pointer.x, pointer.y, 28, true, true);
-    ctx.font='900 11px system-ui'; ctx.textAlign='center';
-    ctx.fillStyle= ok ? '#dfff9d' : '#ffd0d7';
-    ctx.fillText(ok ? 'DROP GOBLIN' : 'NO DEPLOY', pointer.x, pointer.y-35);
-    ctx.restore();
-  }
-
-  function drawHealth(x,y,w,pct,color){
-    pct = clamp(pct,0,1);
-    ctx.save();
-    ctx.fillStyle='rgba(0,0,0,.55)';
-    roundRect(x-w/2,y,w,6,3,true,false);
-    ctx.fillStyle=color;
-    roundRect(x-w/2,y,w*pct,6,3,true,false);
-    ctx.restore();
-  }
-
-  function drawShadow(x,y,r){
-    ctx.save();
-    ctx.globalAlpha=.28;
-    ctx.fillStyle='#000';
+    ctx.fillStyle = '#2b2438';
     ctx.beginPath();
-    ctx.ellipse(x,y,r, r*.36,0,0,Math.PI*2);
+    ctx.moveTo(x - t.radius - 3, y - 18);
+    ctx.lineTo(x, y - (t.kind === 'core' ? 54 : 44));
+    ctx.lineTo(x + t.radius + 3, y - 18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = teamCol;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    if (t.kind === 'core') {
+      ctx.fillStyle = '#ffd76a';
+      ctx.beginPath();
+      ctx.arc(x, y - 48, 5 + Math.sin(state.time * 5) * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,215,106,.55)';
+      ctx.beginPath();
+      ctx.arc(x, y - 48, 11 + Math.sin(state.time * 3) * 2, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = teamCol;
+    ctx.beginPath();
+    ctx.arc(x - 8, y - 2, 3, 0, Math.PI * 2);
+    ctx.arc(x + 8, y - 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    drawHpBar(x - 26, y + 36, 52, 6, t.hp, t.maxHp, teamCol);
+    ctx.restore();
+  }
+
+  function drawUnits() {
+    const sorted = state.units.slice().sort((a,b) => a.y - b.y);
+    for (const u of sorted) drawUnit(u);
+  }
+
+  function drawUnit(u) {
+    const s = specs[u.key];
+    const teamCol = u.team === PLAYER ? '#79ff6a' : '#ff5b6e';
+    const bob = Math.sin(u.bob) * (u.key === 'batSwarm' ? 4 : 2);
+    const y = u.y + bob;
+    ctx.save();
+
+    ctx.fillStyle = 'rgba(0,0,0,.34)';
+    ctx.beginPath();
+    ctx.ellipse(u.x, u.y + u.radius + 4, u.radius + 8, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (u.attackFlash > 0) {
+      ctx.strokeStyle = teamCol;
+      ctx.globalAlpha = u.attackFlash * .6;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(u.x, y, u.radius + 10 + u.attackFlash * 8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    if (u.key === 'graveGoblin') drawGoblin(u.x, y, u.team, u.hurt);
+    else if (u.key === 'candleImp') drawImp(u.x, y, u.team, u.hurt);
+    else if (u.key === 'boneBrute') drawBrute(u.x, y, u.team, u.hurt);
+    else drawBat(u.x, y, u.team, u.hurt);
+
+    drawHpBar(u.x - 16, y - u.radius - 16, 32, 4, u.hp, u.maxHp, teamCol);
+    ctx.restore();
+  }
+
+  function drawGoblin(x, y, team, hurt) {
+    const facing = team === PLAYER ? -1 : 1;
+    const skin = hurt > 0 ? '#fff2a4' : '#7dff6b';
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#151016';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = '#25331e';
+    ctx.beginPath();
+    ctx.ellipse(0, 6, 11, 12, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.ellipse(0, -5, 12, 10, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-8, -7); ctx.lineTo(-19, -13); ctx.lineTo(-11, -2);
+    ctx.moveTo(8, -7); ctx.lineTo(19, -13); ctx.lineTo(11, -2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-4, -6, 2, 0, Math.PI * 2); ctx.arc(5, -6, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#dfffd8';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(10 * facing, 4); ctx.lineTo(24 * facing, -8);
+    ctx.stroke();
+    ctx.fillStyle = '#dfffd8';
+    ctx.beginPath();
+    ctx.moveTo(24 * facing, -8); ctx.lineTo(18 * facing, -8); ctx.lineTo(23 * facing, -3);
     ctx.fill();
     ctx.restore();
   }
 
-  function drawHudValues(){
-    if(!game){
-      energyFill.style.width = '50%'; energyText.textContent = '5/10';
-      enemyHpFill.style.width = '100%'; playerHpFill.style.width = '100%';
-      enemyHpText.textContent = '100%'; playerHpText.textContent = '100%';
-      return;
-    }
-    energyFill.style.width = (game.energy / 10 * 100).toFixed(0) + '%';
-    energyText.textContent = Math.floor(game.energy) + '/10';
-    const enemyCore = game.structures.find(s => s.id === 'enemyCore');
-    const playerCore = game.structures.find(s => s.id === 'playerCore');
-    const ep = enemyCore ? enemyCore.hp / enemyCore.maxHp : 0;
-    const pp = playerCore ? playerCore.hp / playerCore.maxHp : 0;
-    enemyHpFill.style.width = (ep*100).toFixed(0) + '%';
-    playerHpFill.style.width = (pp*100).toFixed(0) + '%';
-    enemyHpText.textContent = Math.max(0, Math.ceil(ep*100)) + '%';
-    playerHpText.textContent = Math.max(0, Math.ceil(pp*100)) + '%';
-    const battle = currentBattle();
-    battleNameEl.textContent = battle.name + (progress.battle >= battles.length ? ' +' : '');
-    battleSubEl.textContent = 'Goblin L' + progress.goblinLevel + '  |  Skulls ' + progress.skulls + '  |  Time ' + Math.floor(game.time) + 's';
-    if(performance.now() > toastUntil) messageEl.textContent = '';
+  function drawImp(x, y, team, hurt) {
+    const body = hurt > 0 ? '#fff0c0' : '#ffb43f';
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = 'rgba(255,180,63,.2)';
+    ctx.beginPath();
+    ctx.arc(0, -16, 16 + Math.sin(state.time * 8) * 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#4a241b';
+    ctx.strokeStyle = '#151016';
+    ctx.lineWidth = 2;
+    roundRect(-9, -2, 18, 20, 5);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(0, -8, 10, 10, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffe36a';
+    ctx.beginPath();
+    ctx.moveTo(0, -27);
+    ctx.bezierCurveTo(-8, -18, -3, -15, 0, -12);
+    ctx.bezierCurveTo(8, -17, 5, -22, 0, -27);
+    ctx.fill();
+    ctx.fillStyle = team === PLAYER ? '#79ff6a' : '#ff5b6e';
+    ctx.beginPath();
+    ctx.arc(-4, -9, 2, 0, Math.PI * 2); ctx.arc(4, -9, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
-  function puff(x,y,color,count){
-    if(!game) return;
-    for(let i=0;i<count;i++){
-      game.particles.push({ x:x+rand(-4,4), y:y+rand(-4,4), vx:rand(-42,42), vy:rand(-70,25), r:rand(2,5), color, life:rand(.22,.58), maxLife:.58 });
+  function drawBrute(x, y, team, hurt) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.strokeStyle = '#151016';
+    ctx.lineWidth = 2;
+    ctx.fillStyle = hurt > 0 ? '#fff2c2' : '#e7ddc2';
+    roundRect(-15, -5, 30, 32, 8);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#4e4336';
+    ctx.beginPath();
+    ctx.ellipse(0, -10, 15, 12, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#101010';
+    ctx.beginPath();
+    ctx.arc(-5, -11, 2, 0, Math.PI * 2); ctx.arc(5, -11, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = team === PLAYER ? '#79ff6a' : '#ff5b6e';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-18, 4); ctx.lineTo(-28, 15);
+    ctx.moveTo(18, 4); ctx.lineTo(28, 15);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBat(x, y, team, hurt) {
+    ctx.save();
+    ctx.translate(x, y);
+    const col = hurt > 0 ? '#fff' : '#c59cff';
+    ctx.fillStyle = col;
+    ctx.strokeStyle = '#151016';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-13, -7 + Math.sin(state.time * 14) * 3);
+    ctx.lineTo(-8, 4);
+    ctx.lineTo(0, 1);
+    ctx.lineTo(8, 4);
+    ctx.lineTo(13, -7 - Math.sin(state.time * 14) * 3);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = team === PLAYER ? '#79ff6a' : '#ff5b6e';
+    ctx.beginPath();
+    ctx.arc(-3, -1, 1.6, 0, Math.PI * 2); ctx.arc(3, -1, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawProjectiles() {
+    for (const p of state.projectiles) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const r = p.kind === 'flame' ? 6 : 4;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r + Math.sin(state.time * 24) * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = .25;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
   }
 
-  function slash(x1,y1,x2,y2,color){
-    if(!game) return;
-    for(let i=0;i<5;i++){
-      game.particles.push({ x:lerp(x1,x2,.55)+rand(-8,8), y:lerp(y1,y2,.55)+rand(-8,8), vx:rand(-12,12), vy:rand(-30,15), r:rand(2,4), color, life:.18, maxLife:.18 });
+  function drawParticles(front) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of state.particles) {
+      const a = clamp(p.life / p.max, 0, 1);
+      const isFront = p.r > 3;
+      if (front !== isFront) continue;
+      ctx.globalAlpha = a * .72;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(.5, p.r * (1 + (1 - a) * 1.2)), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawTexts() {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = '900 13px system-ui';
+    for (const t of state.texts) {
+      ctx.globalAlpha = clamp(t.life / t.max, 0, 1);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0,0,0,.75)';
+      ctx.strokeText(t.text, t.x, t.y);
+      ctx.fillStyle = t.color;
+      ctx.fillText(t.text, t.x, t.y);
+    }
+    ctx.restore();
+  }
+
+  function drawHUD() {
+    drawTopHud();
+    drawEnergy();
+    drawCards();
+    drawToast();
+  }
+
+  function drawTopHud() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(4,2,8,.76)';
+    roundRect(18, 42, 354, 29, 12);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,106,.22)';
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.font = '900 13px system-ui';
+    ctx.fillStyle = '#ffd76a';
+    ctx.fillText('NIGHTMARE PARK', 30, 61);
+    ctx.font = '800 9px system-ui';
+    ctx.fillStyle = '#80e9ff';
+    ctx.fillText('MONSTER ROYALE • ' + BUILD, 156, 60);
+
+    const enemyCore = state.towers.find(t => t.id === 'enemy-core');
+    const playerCore = state.towers.find(t => t.id === 'player-core');
+    drawMiniCore(30, 84, playerCore.hp, playerCore.maxHp, '#79ff6a', 'YOU');
+    drawMiniCore(246, 84, enemyCore.hp, enemyCore.maxHp, '#ff5b6e', 'ENEMY');
+
+    ctx.textAlign = 'center';
+    ctx.font = '900 12px system-ui';
+    ctx.fillStyle = '#fff';
+    ctx.fillText('WAVE ' + state.wave, 195, 92);
+    ctx.font = '800 10px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,.7)';
+    ctx.fillText('Destroy the enemy core', 195, 108);
+    ctx.restore();
+  }
+
+  function drawMiniCore(x, y, hp, max, color, label) {
+    ctx.save();
+    ctx.textAlign = 'left';
+    ctx.font = '800 9px system-ui';
+    ctx.fillStyle = color;
+    ctx.fillText(label, x, y);
+    drawHpBar(x + 34, y - 8, 80, 7, hp, max, color);
+    ctx.restore();
+  }
+
+  function drawEnergy() {
+    ctx.save();
+    const x = 26, y = 666, w = 338, h = 29;
+    ctx.fillStyle = 'rgba(4,2,8,.82)';
+    roundRect(x, y, w, h, 13);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(121,255,106,.35)';
+    ctx.stroke();
+
+    const pct = state.energy / state.maxEnergy;
+    const g = ctx.createLinearGradient(x, y, x + w, y);
+    g.addColorStop(0, '#73ff68');
+    g.addColorStop(.5, '#80e9ff');
+    g.addColorStop(1, '#ff4ed8');
+    ctx.fillStyle = g;
+    roundRect(x + 5, y + 6, (w - 10) * pct, h - 12, 9);
+    ctx.fill();
+    ctx.textAlign = 'center';
+    ctx.font = '900 13px system-ui';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(0,0,0,.8)';
+    ctx.strokeText('CURSED ENERGY ' + Math.floor(state.energy) + ' / 10', x + w / 2, y + 20);
+    ctx.fillStyle = '#fff';
+    ctx.fillText('CURSED ENERGY ' + Math.floor(state.energy) + ' / 10', x + w / 2, y + 20);
+    ctx.restore();
+  }
+
+  function drawCards() {
+    cardRects.length = 0;
+    const y = 708;
+    const gap = 7;
+    const w = (V.w - 32 - gap * 3) / 4;
+    const h = 112;
+    for (let i = 0; i < cards.length; i++) {
+      const x = 16 + i * (w + gap);
+      cardRects.push({ x, y, w, h });
+      drawCard(cards[i], x, y, w, h, state.selected === i);
     }
   }
 
-  function loop(now){
-    const dt = Math.min(.05, (now-last)/1000 || .016);
+  function drawCard(key, x, y, w, h, selected) {
+    const s = specs[key];
+    const enough = state.energy + .001 >= s.cost;
+    ctx.save();
+    if (selected) {
+      ctx.globalAlpha = .6 + Math.sin(state.time * 8) * .15;
+      ctx.fillStyle = '#ffd76a';
+      roundRect(x - 4, y - 5, w + 8, h + 10, 15);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    const cg = ctx.createLinearGradient(x, y, x, y + h);
+    cg.addColorStop(0, enough ? s.card : '#25212a');
+    cg.addColorStop(1, enough ? '#09060f' : '#100e14');
+    ctx.fillStyle = cg;
+    roundRect(x, y, w, h, 13);
+    ctx.fill();
+    ctx.strokeStyle = selected ? '#fff0a8' : enough ? 'rgba(255,255,255,.18)' : 'rgba(255,255,255,.08)';
+    ctx.lineWidth = selected ? 2 : 1;
+    roundRect(x, y, w, h, 13);
+    ctx.stroke();
+
+    ctx.globalAlpha = enough ? 1 : .35;
+    drawCardIcon(key, x + w / 2, y + 39, selected);
+    ctx.textAlign = 'center';
+    ctx.font = '900 10px system-ui';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(s.short.toUpperCase(), x + w / 2, y + 79);
+    ctx.font = '700 8px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,.68)';
+    wrapTiny(s.desc, x + w / 2, y + 93, w - 8);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = enough ? '#79ff6a' : '#ff6b6b';
+    ctx.beginPath();
+    ctx.arc(x + 14, y + 15, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.55)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#081008';
+    ctx.font = '900 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(s.cost), x + 14, y + 20);
+    ctx.restore();
+  }
+
+  function drawCardIcon(key, x, y, selected) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(selected ? 1.08 : 1, selected ? 1.08 : 1);
+    if (key === 'graveGoblin') drawGoblin(0, 5, PLAYER, 0);
+    if (key === 'candleImp') drawImp(0, 9, PLAYER, 0);
+    if (key === 'boneBrute') drawBrute(0, 4, PLAYER, 0);
+    if (key === 'batSwarm') {
+      drawBat(-10, 2, PLAYER, 0); drawBat(9, -5, PLAYER, 0); drawBat(3, 9, PLAYER, 0);
+    }
+    ctx.restore();
+  }
+
+  function drawToast() {
+    if (state.toastTimer <= 0 || !state.toast) return;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, state.toastTimer * 2);
+    ctx.fillStyle = 'rgba(0,0,0,.7)';
+    roundRect(32, 618, 326, 32, 14);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,106,.28)';
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.font = '800 11px system-ui';
+    ctx.fillStyle = '#fff0b8';
+    ctx.fillText(state.toast, 195, 638);
+    ctx.restore();
+  }
+
+  function drawEndOverlay() {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.68)';
+    ctx.fillRect(0, 0, V.w, V.h);
+    ctx.textAlign = 'center';
+    ctx.font = '900 44px system-ui';
+    ctx.lineWidth = 7;
+    ctx.strokeStyle = '#000';
+    ctx.strokeText(state.over, 195, 354);
+    ctx.fillStyle = state.over === 'VICTORY' ? '#79ff6a' : '#ff5b6e';
+    ctx.fillText(state.over, 195, 354);
+    ctx.font = '900 15px system-ui';
+    ctx.fillStyle = '#ffd76a';
+    ctx.fillText('Tap anywhere to restart', 195, 394);
+    ctx.font = '800 11px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,.75)';
+    ctx.fillText('Next: proper monsters, upgrades, bosses and arenas.', 195, 420);
+    ctx.restore();
+  }
+
+  function drawFlash() {
+    ctx.save();
+    ctx.globalAlpha = state.flash * 1.8;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, V.w, V.h);
+    ctx.restore();
+  }
+
+  function drawHpBar(x, y, w, h, hp, max, color) {
+    const pct = clamp(hp / max, 0, 1);
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.62)';
+    roundRect(x, y, w, h, h / 2);
+    ctx.fill();
+    ctx.fillStyle = color;
+    roundRect(x + 1, y + 1, Math.max(0, (w - 2) * pct), h - 2, h / 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawGrave(x, y, s, flip) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(flip ? -s : s, s);
+    ctx.fillStyle = 'rgba(0,0,0,.22)';
+    ctx.beginPath();
+    ctx.ellipse(0, 13, 14, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#77718a';
+    ctx.strokeStyle = '#24202d';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-8, 12);
+    ctx.lineTo(-8, -2);
+    ctx.quadraticCurveTo(-8, -13, 0, -14);
+    ctx.quadraticCurveTo(8, -13, 8, -2);
+    ctx.lineTo(8, 12);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.35)';
+    ctx.beginPath();
+    ctx.moveTo(-4, -3); ctx.lineTo(4, -3);
+    ctx.moveTo(0, -8); ctx.lineTo(0, 6);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPumpkin(x, y, s) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    ctx.fillStyle = '#ff873f';
+    ctx.beginPath();
+    ctx.ellipse(-5, 2, 6, 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 2, 7, 10, 0, 0, Math.PI * 2);
+    ctx.ellipse(5, 2, 6, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#20100a';
+    ctx.beginPath();
+    ctx.moveTo(-5, 0); ctx.lineTo(-1, 2); ctx.lineTo(-5, 4);
+    ctx.moveTo(5, 0); ctx.lineTo(1, 2); ctx.lineTo(5, 4);
+    ctx.fill();
+    ctx.fillStyle = '#3a8d45';
+    ctx.fillRect(-1, -9, 3, 5);
+    ctx.restore();
+  }
+
+  function drawTree(x, y, s) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    ctx.strokeStyle = '#241528';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 18); ctx.lineTo(0, -18);
+    ctx.moveTo(0, -8); ctx.lineTo(-14, -22);
+    ctx.moveTo(0, -10); ctx.lineTo(15, -27);
+    ctx.moveTo(0, 2); ctx.lineTo(-18, -5);
+    ctx.moveTo(0, 0); ctx.lineTo(16, -8);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawTent(x, y, s) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    ctx.fillStyle = 'rgba(0,0,0,.25)';
+    ctx.beginPath();
+    ctx.ellipse(0, 16, 28, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#4e1f48';
+    ctx.beginPath();
+    ctx.moveTo(-24, 18); ctx.lineTo(0, -24); ctx.lineTo(24, 18); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,106,.25)';
+    ctx.stroke();
+    ctx.fillStyle = '#ffd76a';
+    ctx.globalAlpha = .7;
+    ctx.beginPath();
+    ctx.moveTo(0, -24); ctx.lineTo(7, 18); ctx.lineTo(-7, 18); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawMoon(x, y, r) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = .18;
+    ctx.fillStyle = '#d6f9ff';
+    ctx.beginPath();
+    ctx.arc(x, y, r * 1.9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = .82;
+    ctx.fillStyle = '#d6f9ff';
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#231138';
+    ctx.beginPath();
+    ctx.arc(x + 9, y - 4, r * .88, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawRubble(x, y, r) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = '#3b3342';
+    for (let i = 0; i < 7; i++) {
+      const a = i / 7 * Math.PI * 2;
+      ctx.beginPath();
+      ctx.rect(Math.cos(a) * r * .5 - 5, Math.sin(a) * r * .25 + 4, 10, 8);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function slash(u, target, color) {
+    const dx = target.x - u.x;
+    const dy = target.y - u.y;
+    const d = Math.max(1, Math.sqrt(dx*dx + dy*dy));
+    const nx = dx / d, ny = dy / d;
+    for (let i = 0; i < 6; i++) {
+      state.particles.push({
+        x: u.x + nx * (u.radius + i * 5),
+        y: u.y + ny * (u.radius + i * 5),
+        vx: nx * 40 + (rand()-.5) * 40,
+        vy: ny * 40 + (rand()-.5) * 40,
+        r: 2.8,
+        life: .18 + rand() * .12,
+        max: .3,
+        color
+      });
+    }
+  }
+
+  function burst(x, y, color, count, power) {
+    for (let i = 0; i < count; i++) {
+      const a = rand() * Math.PI * 2;
+      const sp = (18 + rand() * 80) * power;
+      state.particles.push({
+        x, y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        r: 1.4 + rand() * 3.6,
+        life: .25 + rand() * .55,
+        max: .8,
+        color
+      });
+    }
+  }
+
+  function popText(x, y, text, color) {
+    state.texts.push({ x, y, text, color, life: .85, max: .85 });
+  }
+
+  function toast(text, time) {
+    state.toast = text;
+    state.toastTimer = time || 1.5;
+  }
+
+  function makeDecor() {
+    const arr = [];
+    const r = mulberry32(4412);
+    for (let i = 0; i < 44; i++) {
+      const side = r() < .5 ? 0 : 1;
+      const y = side ? 432 + r() * 190 : 108 + r() * 148;
+      const laneGap = r();
+      let x;
+      if (laneGap < .33) x = FIELD.x + 18 + r() * 44;
+      else if (laneGap < .66) x = FIELD.x + FIELD.w - 62 + r() * 44;
+      else x = 132 + r() * 128;
+      if (Math.abs(x - LANES[0]) < 24 || Math.abs(x - LANES[1]) < 24 || Math.abs(x - LANES[2]) < 24) x += 34;
+      arr.push({ kind: r() < .65 ? 'grave' : r() < .83 ? 'pumpkin' : 'tree', x, y, s: .55 + r() * .52, flip: r() < .5 });
+    }
+    arr.push({ kind: 'tent', x: 53, y: 129, s: .8 });
+    arr.push({ kind: 'tent', x: 337, y: 610, s: .74 });
+    return arr;
+  }
+
+  function wrapTiny(text, x, y, maxW) {
+    const words = text.split(' ');
+    let line = '';
+    let yy = y;
+    for (const word of words) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, x, yy);
+        line = word;
+        yy += 9;
+      } else line = test;
+    }
+    if (line) ctx.fillText(line, x, yy);
+  }
+
+  function roundRect(x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function inside(px, py, x, y, w, h) { return px >= x && px <= x + w && py >= y && py <= y + h; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function distance(x1, y1, x2, y2) { const dx = x2 - x1, dy = y2 - y1; return Math.sqrt(dx * dx + dy * dy); }
+
+  function mulberry32(seed) {
+    return function() {
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function randFixed(n) {
+    const s = Math.sin(n * 9283.123) * 43758.5453;
+    return s - Math.floor(s);
+  }
+
+  function loop(now) {
+    const dt = Math.min(.05, (now - last) / 1000 || .016);
     last = now;
     update(dt);
-    draw();
-    raf = requestAnimationFrame(loop);
-  }
-
-  function posFromEvent(e){
-    const rect = canvas.getBoundingClientRect();
-    return { x:e.clientX-rect.left, y:e.clientY-rect.top };
-  }
-
-  canvas.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    const p = posFromEvent(e);
-    pointer.x=p.x; pointer.y=p.y; pointer.active=true;
-    deployAt(p.x,p.y);
-  });
-  canvas.addEventListener('pointermove', e => {
-    const p = posFromEvent(e);
-    pointer.x=p.x; pointer.y=p.y; pointer.active=true;
-  });
-  canvas.addEventListener('pointerleave', () => { pointer.active=false; });
-  canvas.addEventListener('pointerup', () => { setTimeout(()=>pointer.active=false, 120); });
-
-  graveCard.addEventListener('click', () => {
-    game && (game.selected = 'graveGoblin');
-    graveCard.classList.add('selected');
-    showToast('Grave Goblin selected.', 700);
-  });
-  impCard.addEventListener('click', () => {
-    showToast('Candle Imp is enemy only for this build.', 1200);
-    impCard.classList.remove('shake'); void impCard.offsetWidth; impCard.classList.add('shake');
-  });
-  resetBtn.addEventListener('click', () => {
-    progress = defaultProgress();
-    saveProgress();
-    game = null;
-    showMenu();
-    showToast('Save reset.', 900);
-  });
-
-  window.addEventListener('resize', resize);
-  window.addEventListener('orientationchange', () => setTimeout(resize, 150));
-
-  function dist2(x1,y1,x2,y2){ const dx=x2-x1, dy=y2-y1; return dx*dx+dy*dy; }
-  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
-  function rand(min,max){ return min + Math.random() * (max-min); }
-  function lerp(a,b,t){ return a + (b-a)*t; }
-  function easeOut(t){ return 1 - Math.pow(1-clamp(t,0,1), 3); }
-  function circle(x,y,r,fill,stroke){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); if(fill === false){} else ctx.fill(); if(stroke) ctx.stroke(); }
-  function triangle(x1,y1,x2,y2,x3,y3){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3); ctx.closePath(); ctx.fill(); }
-  function roundRect(x,y,w,h,r,fill,stroke){
-    const rr = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
-    ctx.beginPath();
-    ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr); ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath();
-    if(fill) ctx.fill(); if(stroke) ctx.stroke();
+    render();
+    requestAnimationFrame(loop);
   }
 
   resize();
-  showMenu();
-  cancelAnimationFrame(raf);
-  raf = requestAnimationFrame(loop);
+  init();
+  requestAnimationFrame(loop);
 })();
 </script>
 </body>
