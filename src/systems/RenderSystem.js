@@ -11,8 +11,29 @@ export class RenderSystem {
     this.offY = 0;
     this.mapImage = new Image();
     this.mapImageLoaded = false;
-    this.mapImage.onload = () => { this.mapImageLoaded = true; };
-    this.mapImage.src = './assets/maps/nightmare_park_arena_v14_4k.jpg';
+    this.mapImageFailed = false;
+    this.mapImageAttempt = 0;
+    this.mapImageCandidates = [
+      './assets/maps/nightmare_park_arena_v14_4k.jpg',
+      'assets/maps/nightmare_park_arena_v14_4k.jpg',
+      './nightmare_park_arena_v14_4k.jpg',
+      'nightmare_park_arena_v14_4k.jpg',
+      `${window.location.pathname.replace(/[^/]*$/, '')}assets/maps/nightmare_park_arena_v14_4k.jpg`
+    ];
+    this.mapImage.onload = () => {
+      this.mapImageLoaded = true;
+      this.mapImageFailed = false;
+    };
+    this.mapImage.onerror = () => {
+      this.mapImageAttempt += 1;
+      if (this.mapImageAttempt < this.mapImageCandidates.length) {
+        this.mapImage.src = this.mapImageCandidates[this.mapImageAttempt];
+      } else {
+        this.mapImageFailed = true;
+        console.warn('Nightmare Park map asset failed to load. Expected assets/maps/nightmare_park_arena_v14_4k.jpg');
+      }
+    };
+    this.mapImage.src = this.mapImageCandidates[0];
   }
 
   resize() {
@@ -116,11 +137,13 @@ export class RenderSystem {
       ctx.drawImage(this.mapImage, field.x, field.y, field.width, field.height);
       ctx.restore();
     } else {
+      // Safe fallback while the 4K map is loading, or if the asset path was not uploaded.
       this.drawGroundTexture(ctx);
       this.drawDecor(ctx, game);
       this.drawRiver(ctx, game.map.river);
       this.drawBridges(ctx, game.map.bridgeBands);
       this.drawPaths(ctx, game);
+      this.drawMapLoadingNotice(ctx);
     }
 
     // Darken edges so cards/HUD remain readable and the map feels deeper.
@@ -130,6 +153,23 @@ export class RenderSystem {
     edge.addColorStop(1, 'rgba(0,0,0,.34)');
     ctx.fillStyle = edge;
     ctx.fillRect(field.x, field.y, field.width, field.height);
+  }
+
+  drawMapLoadingNotice(ctx) {
+    if (this.mapImageLoaded) return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(6,3,12,.72)';
+    this.roundRect(ctx, FIELD.x + 18, FIELD.y + 20, FIELD.width - 36, 42, 12);
+    ctx.fill();
+    ctx.font = '700 11px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = this.mapImageFailed ? '#ff8fac' : '#a7ffca';
+    ctx.fillText(
+      this.mapImageFailed ? 'MAP ASSET MISSING: upload assets/maps/nightmare_park_arena_v14_4k.jpg' : 'LOADING 4K MAP...',
+      FIELD.x + FIELD.width / 2,
+      FIELD.y + 46
+    );
+    ctx.restore();
   }
 
   drawAmbientMapLighting(ctx, game) {
@@ -241,7 +281,8 @@ export class RenderSystem {
   }
 
   drawDecor(ctx, game) {
-    for (const decor of game.map.decor) {
+    const decorItems = Array.isArray(game.map.decor) ? game.map.decor : [];
+    for (const decor of decorItems) {
       ctx.save();
       ctx.translate(decor.x, decor.y);
       ctx.globalAlpha = 0.42;
