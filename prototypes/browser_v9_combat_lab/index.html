@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#080713" />
+<title>Nightmare Park: Monster Royale v9 Combat Lab</title>
+<style>
+:root{
+  --bg:#070710;
+  --panel:rgba(22,20,46,.86);
+  --panel2:rgba(10,12,28,.92);
+  --stroke:rgba(210,196,255,.22);
+  --text:#f6f0ff;
+  --muted:#b9b0d8;
+  --good:#6dff94;
+  --bad:#ff5f6e;
+  --warn:#ffd25c;
+  --blue:#63ddff;
+  --purple:#9066ff;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:none;user-select:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#02020a;color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+#shell{position:fixed;inset:0;overflow:hidden;background:radial-gradient(circle at 50% 10%,#21164b 0,#0c0b1f 36%,#020208 100%)}
+#game{position:absolute;inset:0;width:100%;height:100%;display:block;background:#04040b}
+#topHud{position:absolute;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:3;display:grid;grid-template-columns:1fr .8fr 1fr;gap:8px;pointer-events:none}
+.statCard{border:1px solid var(--stroke);border-radius:18px;background:linear-gradient(180deg,rgba(31,28,64,.92),rgba(11,12,28,.88));box-shadow:0 12px 36px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08);padding:9px 10px;min-height:72px;overflow:hidden}
+.statCard.center{text-align:center;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:7px 4px}
+.label{font-size:10px;font-weight:900;letter-spacing:3px;color:#d7cfff;text-transform:uppercase;line-height:1.08}
+.bigNum{font-size:24px;font-weight:950;letter-spacing:1px;line-height:1.05;margin-top:2px;text-shadow:0 3px 10px rgba(0,0,0,.45)}
+.hpTrack{height:13px;border-radius:999px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);margin-top:8px;overflow:hidden}
+.hpFill{height:100%;width:100%;border-radius:999px;background:linear-gradient(90deg,#ff4e68,#ffd764);transition:width .18s linear}
+.hpFill.player{background:linear-gradient(90deg,#62ddff,#89ff80)}
+#timer{font-size:32px;font-weight:950;line-height:.95;letter-spacing:1px}
+#battleText{font-size:11px;font-weight:900;letter-spacing:4px;color:#d8cffd;margin-top:5px;text-transform:uppercase}
+#metrics{position:absolute;top:calc(92px + env(safe-area-inset-top));left:10px;right:10px;z-index:3;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;pointer-events:none}
+.metric{border:1px solid rgba(220,205,255,.18);border-radius:15px;background:rgba(12,13,31,.76);box-shadow:0 10px 24px rgba(0,0,0,.22);padding:8px 10px;min-height:61px;backdrop-filter:blur(8px)}
+.metricTitle{font-size:10px;font-weight:950;letter-spacing:3px;color:#cfc2ff;text-transform:uppercase}
+.metricValue{font-size:25px;font-weight:950;margin-top:2px;line-height:1}.metricSmall{font-size:11px;font-weight:800;color:#c9c0e9;line-height:1.08}
+#bottomHud{position:absolute;left:0;right:0;bottom:0;z-index:4;padding:9px 12px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(4,5,16,.12),rgba(4,5,14,.96) 18%,#050610 100%);border-top:1px solid rgba(200,190,255,.12);box-shadow:0 -18px 40px rgba(0,0,0,.5)}
+#energyRow{display:grid;grid-template-columns:66px 1fr 94px;align-items:center;gap:10px;margin-bottom:8px}
+#energyOrb{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 28% 22%,#effcff,#88a7ff 18%,#4d5dff 55%,#1721a6 100%);border:1px solid rgba(255,255,255,.4);font-size:28px;font-weight:950;box-shadow:0 0 22px rgba(101,132,255,.48), inset 0 3px 10px rgba(255,255,255,.46)}
+#energyTrack{height:30px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);overflow:hidden;position:relative;box-shadow:inset 0 0 12px rgba(0,0,0,.35)}
+#energyFill{height:100%;width:50%;border-radius:999px;background:linear-gradient(90deg,#815cff,#4cecff,#78ff75);box-shadow:0 0 18px rgba(120,255,117,.35);transition:width .12s linear}
+#energyHint{text-align:right;font-size:12px;font-weight:950;letter-spacing:2px;text-transform:uppercase;color:#d7cffd;line-height:1.08}.energyNumber{font-size:18px;color:#fff;letter-spacing:1px}
+#cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-items:stretch}
+.card{position:relative;border:1px solid rgba(230,220,255,.26);border-radius:18px;background:linear-gradient(180deg,rgba(55,50,100,.96),rgba(18,20,44,.95));min-height:102px;color:white;box-shadow:0 9px 22px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.13);overflow:hidden;padding:7px 6px 6px;cursor:pointer;touch-action:none;text-align:left}
+.card.selected{outline:2px solid #78ff8a;box-shadow:0 0 0 4px rgba(120,255,138,.18),0 13px 30px rgba(0,0,0,.44)}
+.card.disabled{filter:grayscale(.6);opacity:.55}.card.disabled:after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.28)}
+.cardCost{position:absolute;left:6px;top:6px;width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 25% 20%,#fff,#8eb8ff 30%,#4154ff 76%);display:flex;align-items:center;justify-content:center;font-weight:950;font-size:18px;text-shadow:0 2px 5px rgba(0,0,0,.45);z-index:2;border:1px solid rgba(255,255,255,.44)}
+.cardArt{height:58px;border-radius:13px;background:radial-gradient(circle at 50% 20%,rgba(121,255,149,.34),rgba(52,42,98,.7));display:flex;align-items:center;justify-content:center;font-size:30px;overflow:hidden;border:1px solid rgba(255,255,255,.10);margin-bottom:5px}
+.cardArt img{width:100%;height:100%;object-fit:cover}.cardTitle{font-size:10px;font-weight:950;letter-spacing:.7px;text-transform:uppercase;line-height:1.05}.cardSub{font-size:9px;font-weight:800;color:#c7c0df;line-height:1.05;margin-top:2px}
+#toast{position:absolute;z-index:6;left:50%;top:43%;transform:translate(-50%,-50%);min-width:250px;max-width:86vw;text-align:center;border-radius:20px;background:linear-gradient(180deg,rgba(51,32,93,.96),rgba(25,20,55,.96));border:1px solid rgba(230,220,255,.28);box-shadow:0 22px 60px rgba(0,0,0,.5);padding:14px 18px;font-weight:950;font-size:18px;letter-spacing:1.8px;text-transform:uppercase;pointer-events:none;opacity:0;transition:opacity .18s ease, transform .18s ease}.showToast{opacity:1!important;transform:translate(-50%,-55%)!important}
+#overlay{position:absolute;z-index:10;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 45%,rgba(64,43,126,.55),rgba(2,2,8,.88) 67%,#000 100%);padding:20px}.overlayHidden{display:none!important}
+.overlayPanel{width:min(520px,92vw);border-radius:28px;background:linear-gradient(180deg,rgba(37,28,80,.96),rgba(12,13,31,.97));border:1px solid rgba(230,220,255,.24);box-shadow:0 30px 90px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.12);padding:22px;text-align:center}.logo{font-size:30px;font-weight:1000;letter-spacing:2px;line-height:.98;text-transform:uppercase}.subtitle{margin:10px auto 18px;max-width:380px;color:#d6cdf8;font-size:14px;font-weight:750;line-height:1.35}.buttonRow{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}.btn{border:none;border-radius:18px;background:linear-gradient(135deg,#735dff,#63e4ff 55%,#7aff73);padding:14px 15px;color:#050512;font-size:15px;font-weight:950;letter-spacing:1px;text-transform:uppercase;box-shadow:0 12px 26px rgba(0,0,0,.36);cursor:pointer}.btn.secondary{background:rgba(255,255,255,.09);color:#f5f1ff;border:1px solid rgba(255,255,255,.17)}.btn.danger{background:rgba(255,82,102,.14);color:#ffd1d8;border:1px solid rgba(255,82,102,.3)}
+.upgrades{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}.upgrade{border:1px solid rgba(240,230,255,.22);background:rgba(255,255,255,.08);border-radius:18px;padding:13px;text-align:left}.upgrade strong{display:block;font-size:14px;letter-spacing:1px;text-transform:uppercase}.upgrade span{display:block;color:#d2c9ee;font-size:12px;line-height:1.25;margin-top:4px}.tiny{font-size:11px;color:#aaa0cc;line-height:1.3;margin-top:12px}.hideSmall{display:none!important}
+@media(max-height:700px){#metrics{display:none}#topHud{grid-template-columns:1fr .65fr 1fr}.statCard{min-height:62px;padding:7px 8px}.bigNum{font-size:21px}#timer{font-size:28px}.card{min-height:91px}.cardArt{height:49px}.metric{min-height:52px}#energyOrb{width:54px;height:54px;font-size:24px}#energyRow{grid-template-columns:58px 1fr 84px}}
+</style>
+</head>
+<body>
+<div id="shell">
+  <canvas id="game" aria-label="Nightmare Park combat canvas"></canvas>
+  <div id="topHud">
+    <div class="statCard">
+      <div class="label">👑 Enemy Core</div>
+      <div class="bigNum" id="enemyHpText">2400</div>
+      <div class="hpTrack"><div id="enemyHpFill" class="hpFill"></div></div>
+    </div>
+    <div class="statCard center">
+      <div id="timer">3:00</div>
+      <div id="battleText">Battle</div>
+    </div>
+    <div class="statCard">
+      <div class="label">🛡 Your Core</div>
+      <div class="bigNum" id="playerHpText">2400</div>
+      <div class="hpTrack"><div id="playerHpFill" class="hpFill player"></div></div>
+    </div>
+  </div>
+  <div id="metrics">
+    <div class="metric"><div class="metricTitle">Screams</div><div class="metricValue" id="screamsText">0 😱</div><div class="metricSmall">Kills this battle</div></div>
+    <div class="metric"><div class="metricTitle">Bones</div><div class="metricValue" id="bonesText">0 🦴</div><div class="metricSmall">Reward for kills</div></div>
+    <div class="metric"><div class="metricTitle">Chaos</div><div class="metricValue" id="chaosText">0% 🔥</div><div class="metricSmall">Rises as it kicks off</div></div>
+  </div>
+  <div id="bottomHud">
+    <div id="energyRow">
+      <div id="energyOrb">5</div>
+      <div id="energyTrack"><div id="energyFill"></div></div>
+      <div id="energyHint"><span class="energyNumber" id="energyText">5.0 / 10</span><br>Scare Energy</div>
+    </div>
+    <div id="cards"></div>
+  </div>
+  <div id="toast"></div>
+  <div id="overlay"></div>
+</div>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const shell = $("shell");
+  const canvas = $("game");
+  const ctx = canvas.getContext("2d");
+  const ui = {
+    enemyHpText: $("enemyHpText"), playerHpText: $("playerHpText"), enemyHpFill: $("enemyHpFill"), playerHpFill: $("playerHpFill"),
+    timer: $("timer"), battleText: $("battleText"), screamsText: $("screamsText"), bonesText: $("bonesText"), chaosText: $("chaosText"),
+    energyOrb: $("energyOrb"), energyText: $("energyText"), energyFill: $("energyFill"), cards: $("cards"), toast: $("toast"), overlay: $("overlay")
+  };
+  const SAVE_KEY = "nightmareParkMonsterRoyaleV9";
+  const assets = {};
+  const assetList = {
+    arena: "assets/arena_one.png",
+    goblinHero: "assets/grave_goblin_hero.png",
+    goblinRun: "assets/grave_goblin_run.png",
+    goblinAttack: "assets/grave_goblin_attack.png"
+  };
+  Object.entries(assetList).forEach(([key, src]) => {
+    const img = new Image(); img.src = src; assets[key] = img;
+  });
+
+  let W = 0, H = 0, DPR = 1;
+  const field = {x:14,y:132,w:0,h:0,mid:0,bottom:0,deployTop:0,deployBottom:0};
+  const progressDefault = {wins:0,totalBones:0,battleLevel:1,upgrades:{damage:0,hp:0,speed:0,energy:0}};
+  let progress = loadProgress();
+  const cards = {
+    grave:{key:"grave", name:"Grave Goblin", sub:"Fast stabber", cost:2, emoji:"☠️", type:"graveGoblin", group:1, unlocked:true},
+    bones:{key:"bones", name:"Bone Pack", sub:"Three brittle pests", cost:3, emoji:"🦴", type:"boneRunner", group:3, unlocked:true},
+    ghoul:{key:"ghoul", name:"Crypt Bruiser", sub:"Slow tank", cost:4, emoji:"🧟", type:"cryptBruiser", group:1, unlocked:true},
+    bats:{key:"bats", name:"Screech Bats", sub:"Tiny swarm", cost:3, emoji:"🦇", type:"screechBat", group:4, unlocked:true}
+  };
+  const unitBase = {
+    graveGoblin:{hp:158,damage:34,speed:78,range:23,attackEvery:.62,radius:17,bones:3,kind:"melee"},
+    boneRunner:{hp:70,damage:15,speed:88,range:18,attackEvery:.55,radius:12,bones:1,kind:"melee"},
+    cryptBruiser:{hp:455,damage:45,speed:38,range:26,attackEvery:.95,radius:24,bones:5,kind:"melee"},
+    screechBat:{hp:58,damage:11,speed:112,range:58,attackEvery:.7,radius:11,bones:1,kind:"ranged"},
+    candleImp:{hp:118,damage:18,speed:52,range:100,attackEvery:1.05,radius:15,bones:2,kind:"ranged"},
+    rotHound:{hp:310,damage:31,speed:56,range:22,attackEvery:.82,radius:20,bones:4,kind:"melee"},
+    shadeGoblin:{hp:125,damage:24,speed:76,range:22,attackEvery:.65,radius:16,bones:2,kind:"melee"}
+  };
+
+  const state = {
+    mode:"menu", selected:"grave", energy:5, enemyEnergy:5, units:[], structures:[], projectiles:[], particles:[], floaters:[],
+    battleTime:180, elapsed:0, lastFrame:0, nextEnemyDrop:2.5, screams:0, bones:0, chaos:0, drag:null, ghost:null, roundMessage:"",
+    winner:null, started:false
+  };
+
+  function loadProgress(){
+    try{
+      const raw = localStorage.getItem(SAVE_KEY);
+      if(!raw) return structuredClone(progressDefault);
+      const parsed = JSON.parse(raw);
+      return {
+        wins: Number(parsed.wins || 0), totalBones:Number(parsed.totalBones || 0), battleLevel:Number(parsed.battleLevel || 1),
+        upgrades:{damage:Number(parsed.upgrades?.damage||0), hp:Number(parsed.upgrades?.hp||0), speed:Number(parsed.upgrades?.speed||0), energy:Number(parsed.upgrades?.energy||0)}
+      };
+    }catch(e){ return structuredClone(progressDefault); }
+  }
+  function saveProgress(){ localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); }
+  function resetProgress(){ progress = structuredClone(progressDefault); saveProgress(); showMenu(); }
+
+  function resize(){
+    const r = shell.getBoundingClientRect(); W = Math.max(320, r.width); H = Math.max(560, r.height);
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.floor(W * DPR); canvas.height = Math.floor(H * DPR); canvas.style.width = W + "px"; canvas.style.height = H + "px";
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    layoutField();
+    if(state.structures.length) placeStructures();
+  }
+  function layoutField(){
+    const compact = H < 700;
+    const top = compact ? 92 : 155;
+    const bottomHud = compact ? 155 : 185;
+    field.x = 12; field.y = top; field.w = W - 24; field.h = Math.max(330, H - top - bottomHud - 10);
+    field.bottom = field.y + field.h; field.mid = field.y + field.h * .5;
+    field.deployTop = field.y + field.h * .55; field.deployBottom = field.y + field.h * .90;
+  }
+  window.addEventListener("resize", resize, {passive:true});
+  window.addEventListener("orientationchange", () => setTimeout(resize, 120), {passive:true});
+
+  function structure(team,type,lane){
+    return {id:team+"_"+type+"_"+lane, team, type, lane, x:0, y:0, radius:type==="core"?34:25, maxHp:type==="core"?2400:720, hp:type==="core"?2400:720, cd:0, range:type==="core"?150:132, damage:type==="core"?28:32, attackEvery:type==="core"?1.2:.82, dead:false};
+  }
+  function createStructures(){
+    state.structures = [
+      structure("enemy","core","mid"), structure("enemy","tower","left"), structure("enemy","tower","right"),
+      structure("player","core","mid"), structure("player","tower","left"), structure("player","tower","right")
+    ];
+    placeStructures();
+  }
+  function placeStructures(){
+    for(const s of state.structures){
+      const leftX = field.x + field.w * .27, rightX = field.x + field.w * .73, midX = field.x + field.w * .5;
+      if(s.lane === "left") s.x = leftX; else if(s.lane === "right") s.x = rightX; else s.x = midX;
+      if(s.team === "enemy") s.y = s.type === "core" ? field.y + field.h*.065 : field.y + field.h*.235;
+      else s.y = s.type === "core" ? field.y + field.h*.93 : field.y + field.h*.765;
+    }
+  }
+
+  function startBattle(){
+    state.mode = "battle"; state.energy = Math.min(10, 5 + progress.upgrades.energy * .4); state.enemyEnergy = 4.5;
+    state.units = []; state.projectiles = []; state.particles = []; state.floaters = [];
+    state.battleTime = 180; state.elapsed = 0; state.nextEnemyDrop = 2.2; state.screams = 0; state.bones = 0; state.chaos = 0; state.winner = null; state.roundMessage = "";
+    createStructures();
+    ui.overlay.className = "overlayHidden";
+    toast("Tap a card, then place it in your half. Drag also works.");
+    renderCards(); updateUI();
+  }
+  function showMenu(){
+    state.mode = "menu"; state.ghost = null; state.drag = null;
+    ui.overlay.className = "";
+    ui.overlay.innerHTML = `
+      <div class="overlayPanel">
+        <div class="logo">Nightmare Park:<br>Monster Royale</div>
+        <div class="subtitle">v9 Combat Lab. This is the first proper browser battle loop: energy, cards, deployment, enemy AI, towers, core damage, win/loss and upgrades. 👻</div>
+        <div class="metric" style="text-align:left;margin-bottom:12px">
+          <div class="metricTitle">Saved Progress</div>
+          <div class="metricValue">Level ${progress.battleLevel} · ${progress.totalBones} 🦴</div>
+          <div class="metricSmall">Damage +${progress.upgrades.damage} · HP +${progress.upgrades.hp} · Speed +${progress.upgrades.speed} · Energy +${progress.upgrades.energy}</div>
+        </div>
+        <div class="buttonRow">
+          <button class="btn" id="startBtn">Start Battle</button>
+          <button class="btn secondary" id="howBtn">How this plays</button>
+          <button class="btn danger" id="resetBtn">Reset Save</button>
+        </div>
+        <div class="tiny">Deploy in the lower half. Break the enemy core before they break yours. This is not the final Unity build, it is the gameplay lab we should have been using.</div>
+      </div>`;
+    $("startBtn").onclick = startBattle;
+    $("resetBtn").onclick = resetProgress;
+    $("howBtn").onclick = () => toast("Pick cards. Spend Scare Energy. Defend your shrine. Kill the enemy core.");
+    createStructures(); renderCards(); updateUI();
+  }
+  function showEnd(win){
+    state.mode = win ? "reward" : "gameover"; state.winner = win ? "player" : "enemy";
+    if(win){
+      progress.wins += 1; progress.totalBones += state.bones + 10; progress.battleLevel += 1; saveProgress();
+      ui.overlay.className = "";
+      ui.overlay.innerHTML = `
+        <div class="overlayPanel">
+          <div class="logo">Enemy Core Smashed 💀</div>
+          <div class="subtitle">The Grave Goblin survived the test. Pick one upgrade before the next fight.</div>
+          <div class="upgrades">
+            <button class="upgrade" data-up="damage"><strong>Sharper Bone</strong><span>All your monsters hit harder. Current +${progress.upgrades.damage}</span></button>
+            <button class="upgrade" data-up="hp"><strong>Grave Grit</strong><span>All your monsters get more health. Current +${progress.upgrades.hp}</span></button>
+            <button class="upgrade" data-up="speed"><strong>Quick Scuttle</strong><span>Your monsters move faster. Current +${progress.upgrades.speed}</span></button>
+            <button class="upgrade" data-up="energy"><strong>Bigger Scare Battery</strong><span>Start battles with more energy. Current +${progress.upgrades.energy}</span></button>
+          </div>
+          <div class="tiny">Battle bones banked: ${state.bones + 10} 🦴</div>
+        </div>`;
+      ui.overlay.querySelectorAll(".upgrade").forEach(btn => btn.onclick = () => {
+        const up = btn.getAttribute("data-up"); progress.upgrades[up] += 1; saveProgress(); startBattle();
+      });
+    }else{
+      ui.overlay.className = "";
+      ui.overlay.innerHTML = `
+        <div class="overlayPanel">
+          <div class="logo">Your Shrine Fell 🪦</div>
+          <div class="subtitle">Good. That means it is now a game, not a picture. Change card timing and defend the bridges.</div>
+          <div class="buttonRow">
+            <button class="btn" id="retryBtn">Retry Battle</button>
+            <button class="btn secondary" id="menuBtn">Back to Menu</button>
+          </div>
+          <div class="tiny">Screams ${state.screams} · Bones ${state.bones} · Chaos ${Math.round(state.chaos)}%</div>
+        </div>`;
+      $("retryBtn").onclick = startBattle; $("menuBtn").onclick = showMenu;
+    }
+  }
+
+  function renderCards(){
+    ui.cards.innerHTML = "";
+    Object.values(cards).forEach(card => {
+      const btn = document.createElement("button"); btn.className = "card" + (state.selected===card.key?" selected":""); btn.dataset.card = card.key;
+      btn.innerHTML = `<div class="cardCost">${card.cost}</div><div class="cardArt">${card.key==="grave"?"<img src='assets/grave_goblin_hero.png' alt='Grave Goblin'>":card.emoji}</div><div class="cardTitle">${card.name}</div><div class="cardSub">${card.sub}</div>`;
+      btn.addEventListener("click", (e) => { e.preventDefault(); selectCard(card.key); });
+      btn.addEventListener("pointerdown", (e) => beginCardDrag(e, card.key));
+      ui.cards.appendChild(btn);
+    });
+    updateCardAffordability();
+  }
+  function selectCard(key){ state.selected = key; [...ui.cards.children].forEach(c => c.classList.toggle("selected", c.dataset.card === key)); }
+  function updateCardAffordability(){
+    [...ui.cards.children].forEach(el => {
+      const card = cards[el.dataset.card]; el.classList.toggle("disabled", state.mode === "battle" && state.energy + .001 < card.cost);
+    });
+  }
+
+  function beginCardDrag(e, key){
+    if(state.mode !== "battle") return;
+    e.preventDefault(); selectCard(key);
+    const pos = eventPos(e); state.drag = {card:key, active:true}; state.ghost = pos;
+    if(e.currentTarget.setPointerCapture) { try{ e.currentTarget.setPointerCapture(e.pointerId); }catch(_){} }
+  }
+  document.addEventListener("pointermove", (e) => {
+    const pos = eventPos(e); if(state.drag?.active){ state.ghost = pos; e.preventDefault(); }
+  }, {passive:false});
+  document.addEventListener("pointerup", (e) => {
+    if(!state.drag?.active) return;
+    const pos = eventPos(e); const card = state.drag.card; state.drag = null;
+    if(inField(pos.x,pos.y)) deploy(card, pos.x, pos.y, true); else toast("Drop it on the arena");
+    setTimeout(()=>{ if(!state.drag) state.ghost = null; }, 80);
+  }, {passive:false});
+  canvas.addEventListener("pointermove", (e) => { if(state.mode==="battle" && !state.drag){ state.ghost = eventPos(e); } }, {passive:true});
+  canvas.addEventListener("pointerleave", () => { if(!state.drag) state.ghost = null; }, {passive:true});
+  canvas.addEventListener("pointerdown", (e) => {
+    if(state.mode !== "battle") return;
+    const pos = eventPos(e); deploy(state.selected, pos.x, pos.y, false);
+  }, {passive:false});
+  function eventPos(e){ const r = canvas.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; }
+  function inField(x,y){ return x>=field.x && x<=field.x+field.w && y>=field.y && y<=field.bottom; }
+  function validDeploy(x,y){ return inField(x,y) && y >= field.deployTop && y <= field.deployBottom; }
+
+  function deploy(cardKey, x, y, fromDrag){
+    const card = cards[cardKey];
+    if(!card) return false;
+    if(!validDeploy(x,y)){ toast("Place monsters in your half"); burst(x,y,"bad"); return false; }
+    if(state.energy < card.cost){ toast("Not enough Scare Energy"); pulseEnergy(); return false; }
+    state.energy -= card.cost;
+    spawnGroup("player", card.type, x, y, card.group);
+    burst(x,y,"good"); updateUI(); if(navigator.vibrate) navigator.vibrate(fromDrag ? 18 : 8); return true;
+  }
+  function spawnGroup(team,type,x,y,count){
+    const spread = count > 1 ? 22 : 0;
+    for(let i=0;i<count;i++){
+      const angle = (Math.PI*2/count)*i + .4;
+      const px = clamp(x + Math.cos(angle)*spread, field.x+20, field.x+field.w-20);
+      const py = clamp(y + Math.sin(angle)*spread, field.y+20, field.bottom-20);
+      state.units.push(makeUnit(team,type,px,py));
+    }
+  }
+  function makeUnit(team,type,x,y){
+    const base = unitBase[type]; const level = team === "player" ? progress : null;
+    const lvlMul = team === "player" ? 1 + (progress.battleLevel-1)*.015 : 1 + (progress.battleLevel-1)*.035;
+    const hpMul = team === "player" ? 1 + progress.upgrades.hp*.10 : lvlMul;
+    const dmgMul = team === "player" ? 1 + progress.upgrades.damage*.12 : lvlMul;
+    const spdMul = team === "player" ? 1 + progress.upgrades.speed*.07 : 1 + (progress.battleLevel-1)*.018;
+    return {id:Math.random().toString(36).slice(2), team, type, x, y, vx:0, vy:0, radius:base.radius, maxHp:Math.round(base.hp*hpMul), hp:Math.round(base.hp*hpMul), damage:base.damage*dmgMul, speed:base.speed*spdMul, range:base.range, attackEvery:base.attackEvery, cd:Math.random()*.25, kind:base.kind, bones:base.bones, target:null, dead:false, age:0, attacking:false};
+  }
+
+  function update(dt){
+    if(state.mode === "battle") updateBattle(dt);
+    updateParticles(dt); updateFloaters(dt);
+  }
+  function updateBattle(dt){
+    state.elapsed += dt; state.battleTime = Math.max(0, 180 - state.elapsed);
+    const double = state.elapsed > 90;
+    const regen = (double ? 1.75 : 1.03) + progress.upgrades.energy*.03;
+    state.energy = Math.min(10, state.energy + regen*dt);
+    state.enemyEnergy = Math.min(10, state.enemyEnergy + (double ? 1.58 : .93)*dt);
+    state.chaos = clamp(state.chaos + state.units.length * dt * .08, 0, 100);
+    enemyAI(dt);
+    updateStructures(dt); updateUnits(dt); updateProjectiles(dt);
+    state.units = state.units.filter(u => !u.dead);
+    const enemyCore = getCore("enemy"), playerCore = getCore("player");
+    if(enemyCore && enemyCore.hp <= 0) return showEnd(true);
+    if(playerCore && playerCore.hp <= 0) return showEnd(false);
+    if(state.battleTime <= 0){
+      const e = enemyCore?.hp || 0, p = playerCore?.hp || 0;
+      showEnd(p >= e); return;
+    }
+    updateUI();
+  }
+  function enemyAI(dt){
+    state.nextEnemyDrop -= dt;
+    if(state.nextEnemyDrop > 0) return;
+    const difficulty = 1 + Math.min(1.2, (progress.battleLevel-1)*.06 + state.elapsed/260);
+    const choices = [
+      {type:"shadeGoblin",cost:2,weight:4},
+      {type:"candleImp",cost:3,weight:state.elapsed>18?4:1},
+      {type:"rotHound",cost:4,weight:state.elapsed>35?2.4:0}
+    ].filter(c => c.weight>0 && state.enemyEnergy >= c.cost);
+    if(!choices.length){ state.nextEnemyDrop = .8; return; }
+    const chosen = weighted(choices); state.enemyEnergy -= chosen.cost;
+    const laneX = Math.random()<.5 ? field.x + field.w*.28 : field.x + field.w*.72;
+    const jitter = (Math.random()-.5)*field.w*.18;
+    const y = field.y + field.h * (state.elapsed < 20 ? .26 : .34 + Math.random()*.08);
+    const group = chosen.type === "shadeGoblin" && state.elapsed > 55 ? 2 : 1;
+    spawnGroup("enemy", chosen.type, clamp(laneX+jitter, field.x+30, field.x+field.w-30), y, group);
+    state.nextEnemyDrop = clamp(4.8/difficulty + Math.random()*2.4, 1.4, 5.2);
+  }
+  function weighted(items){
+    const total = items.reduce((a,b)=>a+b.weight,0); let r = Math.random()*total;
+    for(const it of items){ r -= it.weight; if(r <= 0) return it; } return items[0];
+  }
+  function updateStructures(dt){
+    for(const s of state.structures){
+      if(s.dead || s.hp <= 0) { s.dead = true; continue; }
+      s.cd -= dt;
+      if(s.damage <= 0) continue;
+      const enemies = state.units.filter(u => u.team !== s.team && !u.dead && dist(u,s) <= s.range);
+      if(enemies.length && s.cd <= 0){
+        enemies.sort((a,b)=>dist(a,s)-dist(b,s));
+        shoot(s, enemies[0], s.damage, s.team, "tower");
+        s.cd = s.attackEvery;
+      }
+    }
+  }
+  function updateUnits(dt){
+    for(const u of state.units){
+      if(u.dead) continue; u.age += dt; u.cd -= dt; u.attacking = false;
+      const target = acquireTarget(u); u.target = target;
+      if(!target) continue;
+      const d = dist(u,target); const reach = u.range + (target.radius || 20);
+      if(d > reach){
+        const dx = (target.x - u.x) / Math.max(.001,d), dy = (target.y - u.y) / Math.max(.001,d);
+        u.vx = dx * u.speed; u.vy = dy * u.speed;
+        u.x += u.vx * dt; u.y += u.vy * dt;
+        applySeparation(u, dt);
+      }else{
+        u.vx = 0; u.vy = 0; u.attacking = true;
+        if(u.cd <= 0){
+          if(u.kind === "ranged") shoot(u,target,u.damage,u.team,u.type); else { applyDamage(target,u.damage,u.team,u.type); slash(u,target); }
+          u.cd = u.attackEvery;
+        }
+      }
+      u.x = clamp(u.x, field.x+10, field.x+field.w-10); u.y = clamp(u.y, field.y+10, field.bottom-10);
+    }
+  }
+  function acquireTarget(u){
+    const enemyUnits = state.units.filter(o => o.team !== u.team && !o.dead);
+    enemyUnits.sort((a,b)=>dist(a,u)-dist(b,u));
+    if(enemyUnits.length && dist(enemyUnits[0],u) < 230) return enemyUnits[0];
+    const structures = state.structures.filter(s => s.team !== u.team && !s.dead && s.hp > 0);
+    structures.sort((a,b)=>dist(a,u)-dist(b,u));
+    return structures[0] || null;
+  }
+  function applySeparation(u, dt){
+    let sx=0, sy=0, count=0;
+    for(const o of state.units){
+      if(o===u || o.team!==u.team || o.dead) continue;
+      const d = dist(u,o), min = u.radius + o.radius + 4;
+      if(d>0 && d<min){ sx += (u.x-o.x)/d*(min-d); sy += (u.y-o.y)/d*(min-d); count++; }
+    }
+    if(count){ u.x += sx*dt*4; u.y += sy*dt*4; }
+  }
+  function updateProjectiles(dt){
+    for(const p of state.projectiles){
+      if(p.dead) continue;
+      if(!p.target || p.target.dead || p.target.hp <= 0){ p.dead = true; continue; }
+      const d = dist(p,p.target); const speed = p.speed;
+      if(d < speed*dt + 8){ applyDamage(p.target,p.damage,p.team,p.style); spark(p.target.x,p.target.y,p.style); p.dead = true; }
+      else{ p.x += (p.target.x-p.x)/d*speed*dt; p.y += (p.target.y-p.y)/d*speed*dt; }
+    }
+    state.projectiles = state.projectiles.filter(p => !p.dead);
+  }
+  function shoot(source,target,damage,team,style){
+    state.projectiles.push({x:source.x,y:source.y,target,damage,team,style,speed:style==="tower"?420:320,dead:false});
+  }
+  function applyDamage(target,amount,sourceTeam,style){
+    if(!target || target.dead) return;
+    target.hp -= amount;
+    const n = Math.round(amount);
+    floating(target.x, target.y - (target.radius||16), n, sourceTeam === "player" ? "good" : "bad");
+    if(target.hp <= 0){
+      target.hp = 0; target.dead = true;
+      burst(target.x,target.y, sourceTeam === "player" ? "good" : "bad");
+      if(target.type === "core" || target.type === "tower") state.chaos = clamp(state.chaos + 12,0,100);
+      if(target.team === "enemy" && sourceTeam === "player" && unitBase[target.type]){}
+      if(sourceTeam === "player" && target.team === "enemy" && target.radius){
+        const bones = target.bones || (target.type === "tower" ? 12 : 0);
+        if(bones){ state.screams += 1; state.bones += bones; }
+      }
+      if(target.team === "player" && sourceTeam === "enemy") state.chaos = clamp(state.chaos + 3,0,100);
+    }
+  }
+  function getCore(team){ return state.structures.find(s => s.team===team && s.type==="core"); }
+
+  function burst(x,y,type){
+    const count = type==="bad" ? 10 : 14;
+    for(let i=0;i<count;i++) state.particles.push({x,y,vx:(Math.random()-.5)*130,vy:(Math.random()-.5)*130,life:.45+Math.random()*.35,max:.75,r:2+Math.random()*4,type});
+  }
+  function slash(a,b){
+    for(let i=0;i<5;i++) state.particles.push({x:(a.x+b.x)/2+(Math.random()-.5)*18,y:(a.y+b.y)/2+(Math.random()-.5)*18,vx:(Math.random()-.5)*80,vy:(Math.random()-.5)*80,life:.22,max:.22,r:2+Math.random()*3,type:"slash"});
+  }
+  function spark(x,y,style){
+    for(let i=0;i<7;i++) state.particles.push({x,y,vx:(Math.random()-.5)*100,vy:(Math.random()-.5)*100,life:.3,max:.3,r:2+Math.random()*3,type:style==="candleImp"?"fire":"good"});
+  }
+  function floating(x,y,text,type){ state.floaters.push({x,y,text:String(text),type,life:.85,max:.85}); }
+  function updateParticles(dt){ for(const p of state.particles){ p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; p.vx*=.96; p.vy*=.96; } state.particles=state.particles.filter(p=>p.life>0); }
+  function updateFloaters(dt){ for(const f of state.floaters){ f.y-=35*dt; f.life-=dt; } state.floaters=state.floaters.filter(f=>f.life>0); }
+
+  function updateUI(){
+    const e = getCore("enemy"), p = getCore("player");
+    if(e){ ui.enemyHpText.textContent = Math.ceil(e.hp); ui.enemyHpFill.style.width = clamp(e.hp/e.maxHp*100,0,100)+"%"; }
+    if(p){ ui.playerHpText.textContent = Math.ceil(p.hp); ui.playerHpFill.style.width = clamp(p.hp/p.maxHp*100,0,100)+"%"; }
+    const t = Math.ceil(state.battleTime); ui.timer.textContent = `${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`;
+    ui.battleText.textContent = state.elapsed > 90 && state.mode === "battle" ? "Double Energy" : `Level ${progress.battleLevel}`;
+    ui.screamsText.textContent = `${state.screams} 😱`; ui.bonesText.textContent = `${state.bones} 🦴`; ui.chaosText.textContent = `${Math.round(state.chaos)}% 🔥`;
+    ui.energyOrb.textContent = Math.floor(state.energy); ui.energyText.textContent = `${state.energy.toFixed(1)} / 10`; ui.energyFill.style.width = `${state.energy*10}%`;
+    updateCardAffordability();
+  }
+  function pulseEnergy(){ ui.energyOrb.animate([{transform:"scale(1)"},{transform:"scale(1.12)"},{transform:"scale(1)"}],{duration:260}); }
+  let toastTimer = 0;
+  function toast(text){ ui.toast.textContent = text; ui.toast.classList.add("showToast"); clearTimeout(toastTimer); toastTimer = setTimeout(()=>ui.toast.classList.remove("showToast"), 1500); }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    drawBackground(); drawFieldFrame(); drawStructures(); drawUnits(); drawProjectiles(); drawParticles(); drawFloaters(); drawGhost();
+  }
+  function drawBackground(){
+    const g = ctx.createRadialGradient(W*.5,H*.2,0,W*.5,H*.2,H*.9); g.addColorStop(0,"#20164a"); g.addColorStop(.45,"#080817"); g.addColorStop(1,"#010104");
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = "rgba(118,82,255,.08)"; for(let i=0;i<26;i++){ const x=(i*73+state.elapsed*6)%W; const y=(i*131)%H; circle(x,y,1+(i%4)); }
+  }
+  function drawFieldFrame(){
+    roundedRect(field.x,field.y,field.w,field.h,22,"rgba(8,7,18,.96)","rgba(226,215,255,.20)",2);
+    ctx.save(); clipRounded(field.x+3,field.y+3,field.w-6,field.h-6,19);
+    if(assets.arena.complete && assets.arena.naturalWidth){ drawCover(assets.arena, field.x+3, field.y+3, field.w-6, field.h-6, .9); }
+    else{ ctx.fillStyle="#112416"; ctx.fillRect(field.x+3,field.y+3,field.w-6,field.h-6); }
+    ctx.fillStyle = "rgba(4,8,18,.22)"; ctx.fillRect(field.x+3,field.y+3,field.w-6,field.h-6);
+    const riverH = Math.max(40, field.h*.095); const riverY = field.mid-riverH/2;
+    const rg = ctx.createLinearGradient(0,riverY,0,riverY+riverH); rg.addColorStop(0,"rgba(81,255,157,.12)"); rg.addColorStop(.5,"rgba(81,255,157,.58)"); rg.addColorStop(1,"rgba(81,255,157,.12)");
+    ctx.fillStyle = rg; ctx.fillRect(field.x+3,riverY,field.w-6,riverH);
+    ctx.strokeStyle="rgba(123,255,168,.38)"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(field.x+6,riverY+riverH*.3); ctx.bezierCurveTo(field.x+field.w*.25,riverY-10,field.x+field.w*.72,riverY+riverH+8,field.x+field.w-6,riverY+riverH*.55); ctx.stroke();
+    drawBridge(field.x+field.w*.31, riverY-8, riverH+16); drawBridge(field.x+field.w*.69, riverY-8, riverH+16);
+    ctx.fillStyle = state.mode === "battle" ? "rgba(106,255,137,.08)" : "rgba(255,255,255,.025)"; ctx.fillRect(field.x+4,field.deployTop,field.w-8,field.deployBottom-field.deployTop);
+    ctx.strokeStyle="rgba(117,255,145,.18)"; ctx.setLineDash([7,7]); ctx.beginPath(); ctx.moveTo(field.x+14,field.deployTop); ctx.lineTo(field.x+field.w-14,field.deployTop); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
+  function drawBridge(x,y,h){
+    ctx.save(); ctx.translate(x,y); ctx.fillStyle="rgba(75,48,25,.95)"; roundedRect(-26,0,52,h,5,"rgba(87,54,27,.96)","rgba(230,180,100,.35)",1);
+    ctx.strokeStyle="rgba(250,210,135,.42)"; ctx.lineWidth=5; for(let i=-18;i<=18;i+=12){ ctx.beginPath(); ctx.moveTo(i,2); ctx.lineTo(i,h-2); ctx.stroke(); }
+    ctx.restore();
+  }
+  function drawStructures(){
+    for(const s of state.structures){
+      const aliveAlpha = s.dead ? .35 : 1; ctx.save(); ctx.globalAlpha = aliveAlpha;
+      const isEnemy = s.team === "enemy"; const col = isEnemy ? "#ff6270" : "#70f6ff"; const glow = isEnemy ? "rgba(255,90,105,.32)" : "rgba(102,230,255,.32)";
+      ctx.shadowColor = glow; ctx.shadowBlur = 14;
+      if(s.type === "core"){
+        roundedRect(s.x-38,s.y-34,76,68,16, isEnemy ? "rgba(64,18,36,.92)" : "rgba(18,42,70,.92)", "rgba(255,255,255,.22)", 2);
+        ctx.fillStyle = col; circle(s.x,s.y-8,15); ctx.fillStyle = "rgba(255,255,255,.82)"; ctx.font="22px system-ui"; ctx.textAlign="center"; ctx.fillText(isEnemy?"👑":"💀",s.x,s.y+21);
+      }else{
+        roundedRect(s.x-27,s.y-30,54,60,13, isEnemy ? "rgba(70,24,42,.92)" : "rgba(19,58,56,.92)", "rgba(255,255,255,.22)", 2);
+        ctx.fillStyle = col; circle(s.x,s.y-17,8); ctx.fillStyle="rgba(255,255,255,.8)"; ctx.font="17px system-ui"; ctx.textAlign="center"; ctx.fillText(isEnemy?"🦇":"☠️",s.x,s.y+14);
+      }
+      ctx.shadowBlur = 0; drawHpBar(s.x, s.y - (s.type==="core"?48:42), s.type==="core"?72:58, s.hp/s.maxHp, isEnemy ? "#ff6370":"#75ff9a");
+      ctx.restore();
+    }
+  }
+  function drawUnits(){
+    const sorted = [...state.units].sort((a,b)=>a.y-b.y);
+    for(const u of sorted){
+      ctx.save();
+      const bob = Math.sin((u.age*10)+(u.x*.03))*3;
+      ctx.translate(u.x,u.y + bob);
+      const faceRight = u.vx >= 0; if(!faceRight) ctx.scale(-1,1);
+      if(u.team === "player" && u.type === "graveGoblin" && assets.goblinRun.complete && assets.goblinRun.naturalWidth){
+        const img = u.attacking && assets.goblinAttack.complete ? assets.goblinAttack : assets.goblinRun;
+        const scale = u.attacking ? 1.05 : 1; ctx.drawImage(img, -32*scale, -36*scale, 64*scale, 56*scale);
+      }else{
+        drawMonsterShape(u);
+      }
+      ctx.restore();
+      drawHpBar(u.x, u.y-u.radius-17, Math.max(28,u.radius*2.4), u.hp/u.maxHp, u.team==="player"?"#7aff84":"#ff5b6b");
+    }
+  }
+  function drawMonsterShape(u){
+    const player = u.team === "player";
+    const body = player ? "#74ff8f" : (u.type==="candleImp"?"#ff9945":"#bb64ff");
+    const edge = player ? "rgba(4,60,20,.9)" : "rgba(55,10,70,.9)";
+    ctx.shadowColor = player ? "rgba(99,255,135,.5)" : "rgba(255,76,111,.45)"; ctx.shadowBlur = 10;
+    if(u.type === "screechBat"){
+      ctx.fillStyle=body; ctx.beginPath(); ctx.moveTo(-u.radius-8,0); ctx.lineTo(-2,-8); ctx.lineTo(0,2); ctx.lineTo(2,-8); ctx.lineTo(u.radius+8,0); ctx.lineTo(3,8); ctx.lineTo(0,3); ctx.lineTo(-3,8); ctx.closePath(); ctx.fill();
+    }else if(u.type === "candleImp"){
+      roundedRect(-10,-16,20,30,7,"#f0e2b1",edge,2); ctx.fillStyle="#ff5c35"; ctx.beginPath(); ctx.moveTo(0,-29); ctx.bezierCurveTo(12,-15,6,-8,0,-10); ctx.bezierCurveTo(-7,-11,-10,-17,0,-29); ctx.fill(); ctx.fillStyle="#23121b"; circle(-4,-4,2); circle(4,-4,2);
+    }else if(u.type === "cryptBruiser" || u.type === "rotHound"){
+      ctx.fillStyle=body; ctx.strokeStyle=edge; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(0,0,u.radius+5,u.radius,0,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.fillStyle="#f9ffca"; circle(6,-4,3); circle(15,-3,3);
+    }else{
+      ctx.fillStyle=body; ctx.strokeStyle=edge; ctx.lineWidth=2; ctx.beginPath(); ctx.ellipse(0,0,u.radius,u.radius*1.08,0,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.fillStyle="#f9ffca"; circle(-5,-3,2.5); circle(5,-3,2.5); ctx.strokeStyle="#f7e8b0"; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(7,6); ctx.lineTo(18,-5); ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  }
+  function drawProjectiles(){
+    for(const p of state.projectiles){
+      ctx.save(); ctx.shadowBlur=12; ctx.shadowColor=p.team==="player"?"#73ff92":"#ff7362"; ctx.fillStyle=p.style==="tower"?"#c8f7ff":(p.team==="player"?"#79ff8d":"#ff9c4a"); circle(p.x,p.y,4); ctx.restore();
+    }
+  }
+  function drawParticles(){
+    for(const p of state.particles){
+      const a = clamp(p.life/p.max,0,1); ctx.save(); ctx.globalAlpha = a; ctx.fillStyle = p.type==="bad"?"#ff6675":p.type==="fire"?"#ff9b3e":p.type==="slash"?"#fff2a1":"#7dff9a"; circle(p.x,p.y,p.r*a+1); ctx.restore();
+    }
+  }
+  function drawFloaters(){
+    ctx.font="900 13px system-ui"; ctx.textAlign="center";
+    for(const f of state.floaters){ const a = clamp(f.life/f.max,0,1); ctx.save(); ctx.globalAlpha = a; ctx.fillStyle=f.type==="good"?"#d7ffd6":"#ffd6dc"; ctx.strokeStyle="rgba(0,0,0,.7)"; ctx.lineWidth=3; ctx.strokeText(f.text,f.x,f.y); ctx.fillText(f.text,f.x,f.y); ctx.restore(); }
+  }
+  function drawGhost(){
+    if(state.mode !== "battle" || !state.ghost) return;
+    const c = cards[state.drag?.card || state.selected]; if(!c) return;
+    const x=state.ghost.x,y=state.ghost.y; const ok = validDeploy(x,y) && state.energy >= c.cost;
+    ctx.save(); ctx.globalAlpha = ok ? .8 : .55; ctx.strokeStyle = ok ? "#80ff93" : "#ff5b6c"; ctx.fillStyle = ok ? "rgba(106,255,137,.14)" : "rgba(255,85,105,.14)"; ctx.lineWidth=3; circle(x,y,28,true); ctx.setLineDash([6,6]); circle(x,y,42,true); ctx.setLineDash([]); ctx.font="900 12px system-ui"; ctx.textAlign="center"; ctx.fillStyle=ok?"#e8ffe8":"#ffd4da"; ctx.fillText(ok?"DEPLOY":"NOPE",x,y-36); ctx.restore();
+  }
+
+  function drawHpBar(x,y,w,p,color){
+    p = clamp(p,0,1); ctx.save(); roundedRect(x-w/2,y,w,7,5,"rgba(0,0,0,.55)","rgba(255,255,255,.18)",1); ctx.fillStyle=color; roundedRect(x-w/2+1,y+1,(w-2)*p,5,4,color,null,0); ctx.restore();
+  }
+  function drawCover(img,x,y,w,h,alpha){
+    const ir = img.naturalWidth / img.naturalHeight, rr = w/h; let sx=0,sy=0,sw=img.naturalWidth,sh=img.naturalHeight;
+    if(ir > rr){ sw = img.naturalHeight*rr; sx = (img.naturalWidth-sw)/2; } else { sh = img.naturalWidth/rr; sy = (img.naturalHeight-sh)/2; }
+    ctx.save(); ctx.globalAlpha=alpha; ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h); ctx.restore();
+  }
+  function roundedRect(x,y,w,h,r,fill,stroke,line){
+    ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+    if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=line||1;ctx.stroke();}
+  }
+  function clipRounded(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.clip(); }
+  function circle(x,y,r,strokeOnly){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); strokeOnly ? ctx.stroke() : ctx.fill(); }
+  function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+  function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+  function loop(ts){
+    if(!state.lastFrame) state.lastFrame = ts; const dt = Math.min(.05, (ts - state.lastFrame)/1000 || 0); state.lastFrame = ts;
+    update(dt); draw(); requestAnimationFrame(loop);
+  }
+
+  resize(); renderCards(); showMenu(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
