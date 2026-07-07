@@ -1,7 +1,7 @@
 import { uid } from '../core/math.js';
 
 export class Effect {
-  constructor({ x, y, text = '', colour = '#fff', life = 0.7, size = 12, type = 'text' }) {
+  constructor({ x, y, text = '', colour = '#fff', life = 0.7, size = 12, type = 'text', angle = 0 }) {
     this.id = uid('effect');
     this.x = x;
     this.y = y;
@@ -11,11 +11,12 @@ export class Effect {
     this.maxLife = life;
     this.size = size;
     this.type = type;
+    this.angle = angle;
   }
 
   update(dt) {
     this.life -= dt;
-    this.y -= dt * 18;
+    if (this.type === 'text') this.y -= dt * 18;
   }
 
   get alive() {

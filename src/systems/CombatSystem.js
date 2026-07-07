@@ -124,6 +124,7 @@ export class CombatSystem {
       target.takeDamage(damage);
       attacker.facing = target.x >= attacker.x ? 1 : -1;
       game.effects.push(new Effect({ x: target.x, y: target.y - 10, text: `-${damage}`, colour: attacker.card.colours[0], life: 0.45, size: 10 }));
+      game.effects.push(new Effect({ x: target.x, y: target.y - 6, colour: attacker.card.colours[0], life: 0.22, type: 'slash', angle: attacker.facing > 0 ? -0.35 : -2.75 }));
       if (attacker.card.special === 'bleed' && Math.random() < 0.22) {
         target.takeDamage(4);
         game.effects.push(new Effect({ x: target.x + 4, y: target.y - 18, text: 'bleed', colour: '#7dff66', life: 0.48, size: 9 }));
@@ -150,6 +151,7 @@ export class CombatSystem {
   applyDamage(game, projectile, target) {
     target.takeDamage(projectile.damage);
     game.effects.push(new Effect({ x: target.x, y: target.y - 12, text: `-${projectile.damage}`, colour: '#ffd86f', life: 0.45, size: 10 }));
+    game.effects.push(new Effect({ x: target.x, y: target.y - 6, colour: this.impactColour(projectile.style), life: 0.26, type: 'burst' }));
 
     if (projectile.splash > 0) {
       const splashTargets = this.liveTargets(game, projectile.team === TEAM.PLAYER ? TEAM.ENEMY : TEAM.PLAYER)
@@ -199,6 +201,14 @@ export class CombatSystem {
     return a.d - b.d;
   }
 
+  impactColour(style) {
+    if (style === 'pumpkin') return '#ff9b35';
+    if (style === 'stone') return '#9da9b8';
+    if (style === 'hex') return '#d58cff';
+    if (style === 'corebolt') return '#ffd86f';
+    return '#88efff';
+  }
+
   projectileSpeed(style) {
     if (style === 'pumpkin') return 190;
     if (style === 'stone') return 235;
@@ -207,6 +217,14 @@ export class CombatSystem {
   }
 
   cleanDead(game) {
+    for (const unit of game.state.units) {
+      if (!unit.alive || unit.progress <= 0 || unit.progress >= 1) {
+        game.effects.push(new Effect({ x: unit.x, y: unit.y - 8, colour: unit.card?.colours?.[0] || '#fff', life: 0.28, type: 'burst' }));
+      }
+    }
+    for (const building of game.state.buildings) {
+      if (!building.alive) game.effects.push(new Effect({ x: building.x, y: building.y - 8, colour: building.card?.colours?.[0] || '#fff', life: 0.32, type: 'burst' }));
+    }
     game.state.units = game.state.units.filter(unit => unit.alive && unit.progress > 0 && unit.progress < 1);
     game.state.buildings = game.state.buildings.filter(building => building.alive);
   }

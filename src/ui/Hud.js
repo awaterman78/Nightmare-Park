@@ -19,9 +19,15 @@ export class Hud {
     this.energyMeter.style.width = `${clamp(game.state.energy / GAME_RULES.maxEnergy, 0, 1) * 100}%`;
 
     this.timerValue.textContent = game.state.suddenDeath ? 'SUDDEN' : formatTime(game.state.matchTimer);
-    this.statusValue.textContent = game.state.over
-      ? (game.state.over === 'victory' ? 'Enemy core destroyed' : 'Your core fell')
-      : (game.state.selectedCard ? 'Green paths yes, cursed fog no' : `Enemy AI active: ${game.state.enemyPlays} plays`);
+
+    if (game.state.over) {
+      this.statusValue.textContent = game.state.over === 'victory' ? 'Victory reward ready' : 'Defeat. Try a new deck cycle';
+    } else if (game.state.selectedCard) {
+      this.statusValue.textContent = 'Drop on green path in your half';
+    } else {
+      const enemyEnergy = Math.floor(game.state.enemyEnergy * 10) / 10;
+      this.statusValue.textContent = `AI: ${game.state.enemyIntent} • ${enemyEnergy}/10`;
+    }
 
     const enemyCore = game.getCore(TEAM.ENEMY);
     this.enemyCoreValue.textContent = `${Math.ceil(enemyCore?.hp || 0)}`;
@@ -34,7 +40,7 @@ export class Hud {
     node.className = 'message';
     node.textContent = text;
     this.feedRoot.prepend(node);
-    while (this.feedRoot.children.length > 3) this.feedRoot.lastElementChild.remove();
-    setTimeout(() => node.remove(), 2800);
+    while (this.feedRoot.children.length > 4) this.feedRoot.lastElementChild.remove();
+    setTimeout(() => node.remove(), 3400);
   }
 }

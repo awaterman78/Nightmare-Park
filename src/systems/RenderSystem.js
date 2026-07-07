@@ -1,6 +1,7 @@
 import { FIELD, TEAM, VIEW } from '../core/constants.js';
 import { clamp } from '../core/math.js';
 import { MAP_IMAGE_DATA_URI } from '../data/mapImage.js';
+import { CARD_LIBRARY } from '../data/cards.js';
 
 export class RenderSystem {
   constructor(canvas) {
@@ -67,6 +68,7 @@ export class RenderSystem {
     this.drawBackdrop(ctx, game);
     this.drawArena(ctx, game);
     this.drawDeploymentOverlay(ctx, game);
+    this.drawEnemyBrainPanel(ctx, game);
 
     for (const tower of game.state.towers) this.drawTower(ctx, tower);
     for (const building of game.state.buildings) this.drawBuilding(ctx, building);
@@ -503,6 +505,31 @@ export class RenderSystem {
     }
   }
 
+  drawEnemyBrainPanel(ctx, game) {
+    if (!game.state || game.state.over) return;
+    ctx.save();
+    const x = FIELD.x + 10;
+    const y = FIELD.y + 12;
+    const w = FIELD.width - 20;
+    const h = 34;
+    this.roundRect(ctx, x, y, w, h, 12);
+    ctx.fillStyle = 'rgba(8,4,13,.58)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,91,110,.25)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#ff8fac';
+    ctx.font = '900 9px Inter, system-ui';
+    ctx.textAlign = 'left';
+    ctx.fillText(`ENEMY BRAIN: ${game.state.enemyIntent || 'thinking'}`, x + 10, y + 13);
+    ctx.fillStyle = 'rgba(255,255,255,.76)';
+    ctx.font = '800 8px Inter, system-ui';
+    const next = CARD_LIBRARY[game.state.enemyNextCard];
+    const last = game.state.enemyLastPlay || 'none';
+    ctx.fillText(`energy ${game.state.enemyEnergy.toFixed(1)}/10 • last ${last}${next ? ` • next ?` : ''}`, x + 10, y + 27);
+    ctx.restore();
+  }
+
   drawTower(ctx, tower) {
     ctx.save();
     ctx.translate(tower.x, tower.y);
@@ -768,7 +795,35 @@ export class RenderSystem {
 
   drawEffect(ctx, effect) {
     ctx.save();
-    ctx.globalAlpha = clamp(effect.life / effect.maxLife, 0, 1);
+    const alpha = clamp(effect.life / effect.maxLife, 0, 1);
+    ctx.globalAlpha = alpha;
+    if (effect.type === 'burst') {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = effect.colour;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(effect.x, effect.y, (1 - alpha) * 24 + 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = effect.colour;
+      ctx.beginPath();
+      ctx.arc(effect.x, effect.y, 5 + (1 - alpha) * 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+    if (effect.type === 'slash') {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.translate(effect.x, effect.y);
+      ctx.rotate(effect.angle || -0.4);
+      ctx.strokeStyle = effect.colour;
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(0, 0, 16 + (1 - alpha) * 7, -0.75, 0.75);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
     ctx.fillStyle = effect.colour;
     ctx.font = `900 ${effect.size}px Inter, system-ui`;
     ctx.textAlign = 'center';
@@ -793,7 +848,10 @@ export class RenderSystem {
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#fff';
     ctx.font = '900 14px Inter, system-ui';
-    ctx.fillText('V14 uses real map art plus navmesh-aware deployment.', VIEW.width / 2, 374);
+    ctx.fillText(game.state.over === 'victory' ? 'Bones earned. Enemy brain beaten.' : 'Enemy brain controlled the park.', VIEW.width / 2, 374);
+    ctx.font = '800 11px Inter, system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.fillText('V15: real card cycling, enemy AI, match flow and combat feedback.', VIEW.width / 2, 398);
     ctx.restore();
   }
 

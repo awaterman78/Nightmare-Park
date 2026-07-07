@@ -1,15 +1,33 @@
-import { CARD_LIBRARY, PLAYER_DECK } from '../data/cards.js';
+import { CARD_LIBRARY } from '../data/cards.js';
 
 export class CardDock {
   constructor({ root, ghost, onSelect, onDrop }) {
     this.root = root;
     this.ghost = ghost;
+    this.nextRoot = document.getElementById('next-card');
     this.onSelect = onSelect;
     this.onDrop = onDrop;
     this.selectedCardId = null;
     this.energy = 0;
     this.dragging = null;
+    this.hand = [];
+    this.nextCardId = null;
     this.render();
+  }
+
+  setHand(cardIds = []) {
+    const next = cardIds.join('|');
+    if (next === this.hand.join('|') && this.root.children.length) return;
+    this.hand = [...cardIds];
+    this.render();
+    this.setEnergy(this.energy);
+    this.setSelected(this.selectedCardId);
+  }
+
+  setNextCard(cardId) {
+    if (this.nextCardId === cardId) return;
+    this.nextCardId = cardId;
+    this.renderNextCard();
   }
 
   setEnergy(energy) {
@@ -17,6 +35,7 @@ export class CardDock {
     for (const button of this.root.querySelectorAll('.card')) {
       const card = CARD_LIBRARY[button.dataset.cardId];
       button.classList.toggle('is-disabled', card.cost > energy);
+      button.setAttribute('aria-disabled', String(card.cost > energy));
     }
   }
 
@@ -33,8 +52,9 @@ export class CardDock {
 
   render() {
     this.root.innerHTML = '';
-    for (const cardId of PLAYER_DECK) {
+    for (const cardId of this.hand) {
       const card = CARD_LIBRARY[cardId];
+      if (!card) continue;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'card';
@@ -51,6 +71,21 @@ export class CardDock {
       button.addEventListener('pointerdown', event => this.startDrag(event, card));
       this.root.appendChild(button);
     }
+    this.renderNextCard();
+  }
+
+  renderNextCard() {
+    if (!this.nextRoot) return;
+    const card = CARD_LIBRARY[this.nextCardId];
+    if (!card) {
+      this.nextRoot.textContent = '';
+      return;
+    }
+    this.nextRoot.innerHTML = `
+      <span class="next-card__label">NEXT</span>
+      <span class="next-card__icon">${card.icon}</span>
+      <strong>${card.shortName}</strong>
+    `;
   }
 
   startDrag(event, card) {

@@ -1,11 +1,12 @@
 import { GAME_RULES, TEAM } from './constants.js';
 import { MAP } from '../data/map.js';
-import { CARD_LIBRARY } from '../data/cards.js';
+import { CARD_LIBRARY, ENEMY_DECK, PLAYER_DECK } from '../data/cards.js';
 import { Tower } from '../entities/Tower.js';
 import { DeploymentSystem } from '../systems/DeploymentSystem.js';
 import { EconomySystem } from '../systems/EconomySystem.js';
 import { CombatSystem } from '../systems/CombatSystem.js';
 import { AISystem } from '../systems/AISystem.js';
+import { CardCycleSystem } from '../systems/CardCycleSystem.js';
 
 export class Game {
   constructor({ renderer, hud, cardDock }) {
@@ -17,6 +18,8 @@ export class Game {
     this.economy = new EconomySystem();
     this.combat = new CombatSystem();
     this.ai = new AISystem();
+    this.playerCycle = null;
+    this.enemyCycle = null;
     this.effects = [];
     this.state = null;
     this.reset();
@@ -24,6 +27,9 @@ export class Game {
 
   reset() {
     this.effects = [];
+    this.playerCycle = new CardCycleSystem(PLAYER_DECK, { shuffle: true });
+    this.enemyCycle = new CardCycleSystem(ENEMY_DECK, { shuffle: true });
+
     this.state = {
       elapsed: 0,
       energy: GAME_RULES.startingEnergy,
@@ -34,14 +40,26 @@ export class Game {
       buildings: [],
       towers: this.map.towers.map(data => new Tower(data)),
       projectiles: [],
-      aiTimer: 1.05,
+      playerHand: this.playerCycle.hand,
+      playerNextCard: this.playerCycle.next,
+      enemyHand: this.enemyCycle.hand,
+      enemyNextCard: this.enemyCycle.next,
+      aiTimer: 0.65,
       enemyPlays: 0,
+      enemyLastPlay: 'Thinking...',
+      enemyIntent: 'Opening pressure',
+      enemyLane: 1,
+      enemyMood: 'probing',
       matchTimer: GAME_RULES.matchSeconds,
       suddenDeath: false,
+      suddenDeathAnnounced: false,
       over: null
     };
+
+    this.cardDock?.setHand(this.state.playerHand);
+    this.cardDock?.setNextCard(this.state.playerNextCard);
     this.cardDock?.clearSelected();
-    this.hud?.pushMessage('V14 loaded: real map asset, navmesh deployment and fixed enemy AI.');
+    this.hud?.pushMessage('V15 loaded: enemy brain, real 4-card hand and card cycling.');
   }
 
   update(dt) {
@@ -51,6 +69,10 @@ export class Game {
       if (this.state.matchTimer <= 0) {
         this.state.matchTimer = 0;
         this.state.suddenDeath = true;
+        if (!this.state.suddenDeathAnnounced) {
+          this.state.suddenDeathAnnounced = true;
+          this.feed('Sudden death: energy and damage ramping up');
+        }
       }
       this.economy.update(this, dt);
       this.ai.update(this, dt);
@@ -61,6 +83,8 @@ export class Game {
     }
 
     this.cardDock?.setEnergy(this.state.energy);
+    this.cardDock?.setHand(this.state.playerHand);
+    this.cardDock?.setNextCard(this.state.playerNextCard);
     this.hud?.update(this);
   }
 
@@ -69,7 +93,15 @@ export class Game {
   }
 
   selectCard(cardId) {
-    if (!CARD_LIBRARY[cardId]) return;
+    const card = CARD_LIBRARY[cardId];
+    if (!card) return;
+    if (!this.playerCycle.has(cardId)) {
+      this.feed('That card is not in your current hand');
+      return;
+    }
+    if (card.cost > this.state.energy) {
+      this.feed(`${card.shortName} needs ${card.cost} energy`);
+    }
     this.state.selectedCard = this.state.selectedCard === cardId ? null : cardId;
     this.cardDock.setSelected(this.state.selectedCard);
   }
@@ -99,12 +131,36 @@ export class Game {
   }
 
   deploy(cardId, x, y, team = TEAM.PLAYER, options = {}) {
-    const deployed = this.deployment.deploy(this, cardId, x, y, team, options);
-    if (deployed && team === TEAM.PLAYER) {
-      const card = CARD_LIBRARY[cardId];
-      this.feed(`${card.shortName} deployed on the navmesh`);
+    if (team === TEAM.PLAYER && !options.free && !this.playerCycle.has(cardId)) {
+      this.feed('Card has already cycled out of your hand');
+      return false;
     }
-    return deployed;
+    if (team === TEAM.ENEMY && !options.free && !this.enemyCycle.has(cardId)) {
+      return false;
+    }
+
+    const deployed = this.deployment.deploy(this, cardId, x, y, team, options);
+    if (!deployed) return false;
+
+    const card = CARD_LIBRARY[cardId];
+    if (!options.free && team === TEAM.PLAYER) {
+      this.playerCycle.play(cardId);
+      this.state.playerHand = this.playerCycle.hand;
+      this.state.playerNextCard = this.playerCycle.next;
+      this.cardDock?.setHand(this.state.playerHand);
+      this.cardDock?.setNextCard(this.state.playerNextCard);
+      this.feed(`${card.shortName} deployed. Next card cycling in.`);
+    }
+
+    if (!options.free && team === TEAM.ENEMY) {
+      this.enemyCycle.play(cardId);
+      this.state.enemyHand = this.enemyCycle.hand;
+      this.state.enemyNextCard = this.enemyCycle.next;
+      this.state.enemyPlays += 1;
+      this.state.enemyLastPlay = card.shortName;
+    }
+
+    return true;
   }
 
   feed(text) {

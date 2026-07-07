@@ -1,4 +1,4 @@
-export const BUILD = 'V14 MAP NAVMESH';
+export const BUILD = 'V15 ENEMY BRAIN';
 
 export const VIEW = Object.freeze({
   width: 390,
@@ -22,13 +22,13 @@ export const TEAM = Object.freeze({
 
 export const GAME_RULES = Object.freeze({
   maxEnergy: 10,
-  startingEnergy: 5,
-  playerEnergyRegen: 0.86,
-  enemyEnergyRegen: 0.84,
+  startingEnergy: 6,
+  playerEnergyRegen: 0.9,
+  enemyEnergyRegen: 0.94,
   matchSeconds: 180,
   suddenDeathMultiplier: 1.35,
+  handSize: 4,
   // Lane progress is 0 at the player base and 1 at the enemy base.
-  // This fixes the V13 AI/deploy mismatch.
   minDeployProgressPlayer: 0.04,
   maxDeployProgressPlayer: 0.49,
   minDeployProgressEnemy: 0.51,
