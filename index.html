@@ -1,19 +1,1004 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="0; url=./prototypes/browser_v9_combat_lab/">
-<title>Nightmare Park: Monster Royale</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Nightmare Park, Monster Royale - V10 Live Build</title>
 <style>
-html,body{height:100%;margin:0;background:#050510;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center}a{color:#8dff9a;font-weight:900}
+  :root {
+    --bg0:#070710;
+    --bg1:#101020;
+    --panel:rgba(14,14,28,.88);
+    --panel2:rgba(28,22,45,.92);
+    --gold:#ffd166;
+    --green:#7cff9b;
+    --red:#ff5f73;
+    --purple:#b58cff;
+    --blue:#74d7ff;
+    --text:#fff8e8;
+    --muted:#b9b0cf;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; overflow:hidden; background:var(--bg0); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+  body { display:flex; align-items:center; justify-content:center; }
+  #shell { position:relative; width:min(100vw, 520px); height:100dvh; max-height:960px; background:#080812; overflow:hidden; border-left:1px solid rgba(255,255,255,.08); border-right:1px solid rgba(255,255,255,.08); touch-action:none; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+  .top-bar { position:absolute; left:10px; right:10px; top:calc(8px + env(safe-area-inset-top)); z-index:5; display:grid; grid-template-columns:1fr auto; gap:8px; align-items:start; pointer-events:none; }
+  .build-label { grid-column:1 / -1; text-align:center; font-size:12px; letter-spacing:.09em; font-weight:900; color:#111; background:linear-gradient(90deg,#fadb64,#ff8f70,#b58cff); border:2px solid rgba(255,255,255,.45); border-radius:999px; padding:5px 10px; box-shadow:0 6px 20px rgba(0,0,0,.4); text-shadow:none; }
+  .stat-card { background:var(--panel); border:1px solid rgba(255,255,255,.14); border-radius:16px; padding:8px 10px; box-shadow:0 8px 26px rgba(0,0,0,.35); backdrop-filter: blur(8px); }
+  .stat-title { font-size:12px; color:var(--gold); font-weight:900; letter-spacing:.04em; }
+  .stat-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+  .mini-grid { display:grid; gap:4px; min-width:118px; }
+  .hp-line { font-size:11px; color:#fff; display:flex; justify-content:space-between; gap:8px; }
+  .hp-track { height:7px; border-radius:999px; background:rgba(255,255,255,.13); overflow:hidden; margin-top:2px; }
+  .hp-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#ff5f73,#ffd166); width:100%; transition:width .12s linear; }
+  #message { position:absolute; z-index:6; left:18px; right:18px; top:calc(92px + env(safe-area-inset-top)); text-align:center; min-height:28px; font-size:14px; font-weight:900; color:#fff; text-shadow:0 3px 12px #000; pointer-events:none; }
+  #bottomHud { position:absolute; left:0; right:0; bottom:0; z-index:7; padding:10px 10px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(180deg,rgba(3,3,10,0),rgba(3,3,10,.96) 20%,rgba(3,3,10,.98)); pointer-events:auto; }
+  .energy-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .energy-label { font-size:12px; font-weight:900; color:var(--blue); min-width:58px; }
+  .energy-track { flex:1; height:16px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.16); box-shadow:inset 0 2px 8px rgba(0,0,0,.5); }
+  #energyFill { height:100%; width:0%; background:linear-gradient(90deg,#4cc9f0,#b58cff,#ffd166); border-radius:999px; }
+  #energyText { font-size:12px; font-weight:900; color:#fff; min-width:45px; text-align:right; }
+  .cards { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:stretch; }
+  .card { position:relative; border:2px solid rgba(255,255,255,.18); background:linear-gradient(180deg,rgba(35,28,64,.96),rgba(13,13,30,.98)); color:#fff; border-radius:18px; padding:8px; min-height:82px; display:grid; grid-template-columns:44px 1fr; gap:8px; align-items:center; box-shadow:0 10px 30px rgba(0,0,0,.35); cursor:pointer; user-select:none; }
+  .card.selected { border-color:var(--gold); box-shadow:0 0 0 3px rgba(255,209,102,.25), 0 14px 32px rgba(0,0,0,.45); transform:translateY(-2px); }
+  .card.locked { opacity:.55; filter:saturate(.5); }
+  .portrait { width:44px; height:54px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:28px; background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.25),rgba(255,255,255,.05) 35%,rgba(0,0,0,.35)); border:1px solid rgba(255,255,255,.18); }
+  .card-name { font-size:13px; font-weight:1000; line-height:1.05; }
+  .card-role { font-size:10px; color:var(--muted); margin-top:3px; line-height:1.1; }
+  .cost { position:absolute; right:7px; top:7px; width:25px; height:25px; border-radius:999px; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#55ddff,#6d55ff); color:#fff; border:1px solid rgba(255,255,255,.35); font-size:13px; font-weight:1000; box-shadow:0 4px 12px rgba(0,0,0,.4); }
+  .small-btn { border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.08); color:#fff; border-radius:16px; padding:8px 10px; font-weight:900; font-size:11px; cursor:pointer; }
+  .small-btn:active, .card:active, .big-btn:active, .reward-btn:active { transform:scale(.98); }
+  .overlay { position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; padding:18px; background:radial-gradient(circle at 50% 25%,rgba(113,78,255,.28),rgba(0,0,0,.88) 52%,rgba(0,0,0,.96)); backdrop-filter:blur(6px); }
+  .overlay.hidden { display:none; }
+  .modal { width:min(100%,460px); border-radius:28px; border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg,rgba(32,27,55,.96),rgba(9,9,20,.98)); padding:20px; box-shadow:0 25px 80px rgba(0,0,0,.55); text-align:center; }
+  .logo { font-size:32px; line-height:1; font-weight:1000; letter-spacing:-.04em; margin:6px 0 3px; }
+  .logo span { display:block; font-size:15px; letter-spacing:.13em; color:var(--gold); margin-top:8px; }
+  .modal p { color:var(--muted); line-height:1.35; margin:10px 0; font-size:14px; }
+  .big-btn { width:100%; margin-top:12px; border:0; border-radius:18px; padding:14px 16px; font-size:16px; font-weight:1000; color:#161218; background:linear-gradient(90deg,#ffd166,#ff8f70); cursor:pointer; box-shadow:0 12px 30px rgba(255,160,80,.25); }
+  .ghost-btn { width:100%; margin-top:9px; border:1px solid rgba(255,255,255,.18); border-radius:18px; padding:12px 14px; font-size:14px; font-weight:900; color:#fff; background:rgba(255,255,255,.08); cursor:pointer; }
+  .progress-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px 0; }
+  .progress-cell { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:10px 8px; }
+  .progress-num { font-size:18px; font-weight:1000; color:#fff; }
+  .progress-label { font-size:10px; color:var(--muted); margin-top:2px; }
+  .reward-list { display:grid; gap:9px; margin-top:12px; }
+  .reward-btn { text-align:left; border:1px solid rgba(255,255,255,.17); border-radius:18px; padding:12px; background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.045)); color:#fff; cursor:pointer; }
+  .reward-title { font-weight:1000; color:var(--gold); font-size:15px; }
+  .reward-desc { color:var(--muted); font-size:12px; margin-top:4px; line-height:1.25; }
+  .shake { animation:shake .26s linear; }
+  @keyframes shake { 0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)} }
+  @media (max-height:720px){ .card{min-height:72px;padding:7px}.portrait{height:48px}.card-name{font-size:12px}.card-role{display:none}.top-bar{gap:6px}.stat-card{padding:7px 8px}.logo{font-size:28px} }
 </style>
 </head>
 <body>
-<main>
-  <h1>Nightmare Park: Monster Royale</h1>
-  <p>Opening v9 Combat Lab...</p>
-  <p><a href="./prototypes/browser_v9_combat_lab/">Tap here if it does not open.</a></p>
-</main>
+<div id="shell">
+  <canvas id="game" aria-label="Nightmare Park Monster Royale game canvas"></canvas>
+
+  <div class="top-bar">
+    <div class="build-label">NIGHTMARE PARK V10 LIVE BUILD - IF YOU CAN SEE THIS, THE NEW INDEX IS LIVE</div>
+    <div class="stat-card">
+      <div class="stat-title" id="battleName">Arena One</div>
+      <div class="stat-sub" id="battleSub">Select Grave Goblin, tap your half, crack the enemy gate.</div>
+    </div>
+    <div class="stat-card mini-grid">
+      <div class="hp-line"><span>Enemy Gate</span><strong id="enemyHpText">100%</strong></div>
+      <div class="hp-track"><div id="enemyHpFill" class="hp-fill"></div></div>
+      <div class="hp-line"><span>Your Gate</span><strong id="playerHpText">100%</strong></div>
+      <div class="hp-track"><div id="playerHpFill" class="hp-fill"></div></div>
+    </div>
+  </div>
+
+  <div id="message"></div>
+
+  <div id="bottomHud">
+    <div class="energy-row">
+      <div class="energy-label">ENERGY</div>
+      <div class="energy-track"><div id="energyFill"></div></div>
+      <div id="energyText">5/10</div>
+    </div>
+    <div class="cards">
+      <div id="graveCard" class="card selected" role="button" tabindex="0">
+        <div class="portrait">🦴</div>
+        <div>
+          <div class="card-name">Grave Goblin</div>
+          <div class="card-role">Fast melee pressure. Tap bottom half to deploy.</div>
+        </div>
+        <div class="cost">2</div>
+      </div>
+      <div id="impCard" class="card locked" role="button" tabindex="0">
+        <div class="portrait">🕯️</div>
+        <div>
+          <div class="card-name">Candle Imp</div>
+          <div class="card-role">Enemy preview. Unlock after Goblin feels right.</div>
+        </div>
+        <div class="cost">?</div>
+      </div>
+      <button id="resetBtn" class="small-btn">RESET<br/>SAVE</button>
+    </div>
+  </div>
+
+  <div id="overlay" class="overlay">
+    <div class="modal" id="modal"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const shell = document.getElementById('shell');
+  const overlay = document.getElementById('overlay');
+  const modal = document.getElementById('modal');
+  const messageEl = document.getElementById('message');
+  const energyFill = document.getElementById('energyFill');
+  const energyText = document.getElementById('energyText');
+  const enemyHpFill = document.getElementById('enemyHpFill');
+  const playerHpFill = document.getElementById('playerHpFill');
+  const enemyHpText = document.getElementById('enemyHpText');
+  const playerHpText = document.getElementById('playerHpText');
+  const battleNameEl = document.getElementById('battleName');
+  const battleSubEl = document.getElementById('battleSub');
+  const graveCard = document.getElementById('graveCard');
+  const impCard = document.getElementById('impCard');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const SAVE_KEY = 'nightmareParkMonsterRoyaleV10';
+  let W = 390;
+  let H = 820;
+  let dpr = 1;
+  let last = performance.now();
+  let raf = 0;
+  let pointer = { x: 0, y: 0, active: false };
+  let toastUntil = 0;
+
+  const battles = [
+    { name:'Battle 1: Graveyard Warmup', sub:'Break the enemy gate while holding your own.', hpBoost:0, reward:20,
+      waves:[
+        { t:2, items:[['enemyGoblin',1]] },
+        { t:8, items:[['enemyGoblin',2]] },
+        { t:15, items:[['enemyGoblin',2],['candleImp',1]] },
+        { t:24, items:[['enemyGoblin',3]] },
+        { t:35, items:[['enemyGoblin',2],['candleImp',2]] },
+        { t:49, items:[['enemyBruiser',1],['enemyGoblin',2]] }
+      ]},
+    { name:'Battle 2: Candle Trouble', sub:'Candle Imps sit back and chip your goblins down.', hpBoost:.18, reward:35,
+      waves:[
+        { t:2, items:[['enemyGoblin',2]] },
+        { t:9, items:[['candleImp',2]] },
+        { t:17, items:[['enemyGoblin',3],['candleImp',1]] },
+        { t:28, items:[['enemyBruiser',1],['candleImp',2]] },
+        { t:42, items:[['enemyGoblin',4],['candleImp',2]] },
+        { t:57, items:[['enemyBruiser',2],['candleImp',2]] }
+      ]},
+    { name:'Battle 3: Gate Cracker', sub:'The enemy rushes hard. Spend fast and swarm.', hpBoost:.35, reward:55,
+      waves:[
+        { t:2, items:[['enemyGoblin',3]] },
+        { t:8, items:[['enemyBruiser',1],['enemyGoblin',2]] },
+        { t:16, items:[['candleImp',3]] },
+        { t:26, items:[['enemyBruiser',2],['enemyGoblin',3]] },
+        { t:40, items:[['enemyGoblin',5],['candleImp',2]] },
+        { t:55, items:[['enemyBruiser',2],['candleImp',3],['enemyGoblin',3]] }
+      ]}
+  ];
+
+  const defaultProgress = () => ({
+    version: 10,
+    goblinLevel: 1,
+    wins: 0,
+    skulls: 0,
+    battle: 0,
+    upgrades: { damage: 0, speed: 0, hp: 0, cost: 0 }
+  });
+
+  let progress = loadProgress();
+  let game = null;
+
+  function loadProgress(){
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if(!raw) return defaultProgress();
+      const data = JSON.parse(raw);
+      if(!data || data.version !== 10) return defaultProgress();
+      data.upgrades = Object.assign({damage:0,speed:0,hp:0,cost:0}, data.upgrades || {});
+      return Object.assign(defaultProgress(), data);
+    } catch(e) { return defaultProgress(); }
+  }
+
+  function saveProgress(){
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(progress)); } catch(e) {}
+  }
+
+  function resize(){
+    const rect = shell.getBoundingClientRect();
+    W = Math.max(320, rect.width);
+    H = Math.max(620, rect.height);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if(game) layoutStructures();
+  }
+
+  function currentBattle(){
+    const baseIndex = Math.min(progress.battle, battles.length - 1);
+    return battles[baseIndex];
+  }
+
+  function endlessScale(){
+    return progress.battle >= battles.length ? 1 + (progress.battle - battles.length + 1) * .16 : 1;
+  }
+
+  function newGame(){
+    game = {
+      phase:'battle',
+      time:0,
+      energy:5,
+      selected:'graveGoblin',
+      units:[],
+      structures:[],
+      particles:[],
+      projectiles:[],
+      spawned:{},
+      cameraShake:0,
+      outcome:null
+    };
+    layoutStructures();
+    overlay.classList.add('hidden');
+    showToast('Tap Grave Goblin, then tap your half. Swarm the enemy gate.', 2200);
+  }
+
+  function layoutStructures(){
+    if(!game) return;
+    const battle = currentBattle();
+    const scale = endlessScale();
+    const boost = 1 + battle.hpBoost + Math.max(0, scale - 1) * .45;
+    const existing = new Map(game.structures.map(s => [s.id, s]));
+    const defs = [
+      { id:'enemyCore', team:'enemy', kind:'core', x:W*.5, y:86, r:30, maxHp:Math.round(470 * boost), range:0, dmg:0, cd:0 },
+      { id:'enemyTowerL', team:'enemy', kind:'tower', x:W*.27, y:168, r:24, maxHp:Math.round(230 * boost), range:148, dmg:15*scale, cd:.88 },
+      { id:'enemyTowerR', team:'enemy', kind:'tower', x:W*.73, y:168, r:24, maxHp:Math.round(230 * boost), range:148, dmg:15*scale, cd:.88 },
+      { id:'playerCore', team:'player', kind:'core', x:W*.5, y:H-190, r:30, maxHp:520, range:0, dmg:0, cd:0 },
+      { id:'playerTowerL', team:'player', kind:'tower', x:W*.27, y:H-282, r:24, maxHp:250, range:155, dmg:17, cd:.82 },
+      { id:'playerTowerR', team:'player', kind:'tower', x:W*.73, y:H-282, r:24, maxHp:250, range:155, dmg:17, cd:.82 }
+    ];
+    game.structures = defs.map(d => {
+      const old = existing.get(d.id);
+      if(old) {
+        const pct = old.hp / Math.max(1, old.maxHp);
+        return Object.assign(old, d, { hp: Math.min(d.maxHp, Math.max(old.hp, Math.round(d.maxHp * pct))) });
+      }
+      return Object.assign({ hp:d.maxHp, attackTimer:0, dead:false }, d);
+    });
+  }
+
+  function showMenu(){
+    const b = currentBattle();
+    overlay.classList.remove('hidden');
+    modal.innerHTML = '';
+    const div = document.createElement('div');
+    div.innerHTML =
+      '<div class="logo">👻 Nightmare Park<span>MONSTER ROYALE</span></div>' +
+      '<p><strong>V10 root index build.</strong> This is the actual live page replacement, not a side folder, not Unity admin, not a redirect guessing game.</p>' +
+      '<div class="progress-grid">' +
+        '<div class="progress-cell"><div class="progress-num">' + progress.goblinLevel + '</div><div class="progress-label">Goblin Level</div></div>' +
+        '<div class="progress-cell"><div class="progress-num">' + progress.wins + '</div><div class="progress-label">Wins</div></div>' +
+        '<div class="progress-cell"><div class="progress-num">' + progress.skulls + '</div><div class="progress-label">Skulls</div></div>' +
+      '</div>' +
+      '<p><strong>' + b.name + '</strong><br/>' + b.sub + '</p>' +
+      '<p>Deploy Grave Goblins in your half. They auto path, fight, stab towers, and push the enemy gate. Candle Imps are enemies for now.</p>';
+    const start = document.createElement('button');
+    start.className = 'big-btn';
+    start.textContent = 'START BATTLE';
+    start.addEventListener('click', newGame);
+    const reset = document.createElement('button');
+    reset.className = 'ghost-btn';
+    reset.textContent = 'Reset saved progress';
+    reset.addEventListener('click', () => {
+      progress = defaultProgress();
+      saveProgress();
+      showMenu();
+    });
+    modal.appendChild(div);
+    modal.appendChild(start);
+    modal.appendChild(reset);
+    battleNameEl.textContent = 'Arena One: Haunted Midway';
+    battleSubEl.textContent = 'V10 live build loaded from root index.html';
+  }
+
+  function showReward(){
+    const battle = currentBattle();
+    progress.wins += 1;
+    progress.skulls += battle.reward;
+    progress.goblinLevel += 1;
+    const nextBattle = Math.min(progress.battle + 1, battles.length + 7);
+    progress.battle = nextBattle;
+    saveProgress();
+
+    overlay.classList.remove('hidden');
+    const rewards = [
+      { key:'damage', title:'Sharper Bone', desc:'+12% Grave Goblin stab damage. Makes swarms crack towers faster.' },
+      { key:'speed', title:'Quick Scuttle', desc:'+10% movement speed. More goblins reach the fight alive.' },
+      { key:'hp', title:'Grave Grit', desc:'+14% health. Goblins survive tower shots longer.' }
+    ];
+    modal.innerHTML = '<div class="logo">VICTORY 🦴<span>CHOOSE A GOBLIN UPGRADE</span></div>' +
+      '<p>You smashed the gate and earned <strong>' + battle.reward + ' skulls</strong>. This is the replay loop: battle, upgrade, tougher wave.</p>' +
+      '<div class="reward-list" id="rewardList"></div>';
+    const list = modal.querySelector('#rewardList');
+    rewards.forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'reward-btn';
+      btn.innerHTML = '<div class="reward-title">' + r.title + '</div><div class="reward-desc">' + r.desc + '</div>';
+      btn.addEventListener('click', () => {
+        progress.upgrades[r.key] += 1;
+        saveProgress();
+        showMenu();
+      });
+      list.appendChild(btn);
+    });
+  }
+
+  function showDefeat(){
+    overlay.classList.remove('hidden');
+    modal.innerHTML = '<div class="logo">DEFEAT 💀<span>THE PARK BIT BACK</span></div>' +
+      '<p>Your gate fell. No progress lost. Try flooding one lane with Grave Goblins, then switch lane once a tower locks on.</p>';
+    const retry = document.createElement('button');
+    retry.className = 'big-btn';
+    retry.textContent = 'RETRY BATTLE';
+    retry.addEventListener('click', newGame);
+    const menu = document.createElement('button');
+    menu.className = 'ghost-btn';
+    menu.textContent = 'Back to menu';
+    menu.addEventListener('click', showMenu);
+    modal.appendChild(retry);
+    modal.appendChild(menu);
+  }
+
+  function showToast(text, ms){
+    messageEl.textContent = text;
+    toastUntil = performance.now() + (ms || 1600);
+  }
+
+  function spawnUnit(team, type, x, y){
+    const scale = team === 'enemy' ? endlessScale() : 1;
+    const up = progress.upgrades;
+    let u = {
+      id: Math.random().toString(36).slice(2), team, type, x, y,
+      vx:0, vy:0, r:13, hp:80, maxHp:80, dmg:10, range:18, atk:.58, attackTimer:0,
+      speed:42, dead:false, bob:Math.random()*6.28
+    };
+    if(type === 'graveGoblin'){
+      const hpMul = 1 + up.hp * .14;
+      const dmgMul = 1 + up.damage * .12;
+      const spdMul = 1 + up.speed * .10;
+      u.r = 13;
+      u.maxHp = Math.round((86 + progress.goblinLevel * 4) * hpMul);
+      u.hp = u.maxHp;
+      u.dmg = Math.round((13 + progress.goblinLevel * 1.2) * dmgMul);
+      u.speed = 58 * spdMul;
+      u.range = 20;
+      u.atk = .46;
+    }
+    if(type === 'enemyGoblin'){
+      u.r = 12; u.maxHp = Math.round(66 * scale); u.hp = u.maxHp; u.dmg = 8.5 * scale; u.speed = 43; u.range = 18; u.atk = .62;
+    }
+    if(type === 'enemyBruiser'){
+      u.r = 17; u.maxHp = Math.round(145 * scale); u.hp = u.maxHp; u.dmg = 17 * scale; u.speed = 30; u.range = 22; u.atk = .82;
+    }
+    if(type === 'candleImp'){
+      u.r = 11; u.maxHp = Math.round(48 * scale); u.hp = u.maxHp; u.dmg = 6.5 * scale; u.speed = 34; u.range = 104; u.atk = .98;
+    }
+    game.units.push(u);
+    puff(x, y, team === 'player' ? '#7cff9b' : '#ff8f70', 8);
+    return u;
+  }
+
+  function spawnWave(wave){
+    const lanes = [W*.28, W*.5, W*.72];
+    let index = 0;
+    wave.items.forEach(pair => {
+      const type = pair[0];
+      const count = pair[1];
+      for(let i=0;i<count;i++){
+        const lane = lanes[(index + i) % lanes.length] + rand(-18, 18);
+        const y = 210 + rand(-16, 18);
+        setTimeout(() => { if(game && game.phase === 'battle') spawnUnit('enemy', type, lane, y); }, index * 260);
+        index += 1;
+      }
+    });
+    showToast('Enemy wave incoming!', 1300);
+  }
+
+  function deployAt(x, y){
+    if(!game || game.phase !== 'battle') return;
+    const cost = 2;
+    if(!validDeploy(x, y)){
+      showToast('Deploy in your half, above the card hand.', 1200);
+      shell.classList.remove('shake'); void shell.offsetWidth; shell.classList.add('shake');
+      return;
+    }
+    if(game.energy < cost){
+      showToast('Not enough energy yet.', 900);
+      shell.classList.remove('shake'); void shell.offsetWidth; shell.classList.add('shake');
+      return;
+    }
+    game.energy -= cost;
+    spawnUnit('player', 'graveGoblin', x, y);
+    showToast('Grave Goblin deployed.', 700);
+  }
+
+  function validDeploy(x,y){
+    const bottomLimit = H - 142 - Math.max(0, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)')) || 0);
+    return y > H * .55 && y < bottomLimit && x > 22 && x < W - 22;
+  }
+
+  function nearestEnemyUnit(unit){
+    let best = null;
+    let bd = Infinity;
+    for(const other of game.units){
+      if(other.dead || other.team === unit.team) continue;
+      const d = dist2(unit.x, unit.y, other.x, other.y);
+      if(d < bd){ bd = d; best = other; }
+    }
+    return best;
+  }
+
+  function nearestEnemyStructure(unit){
+    let best = null;
+    let bd = Infinity;
+    for(const s of game.structures){
+      if(s.dead || s.hp <= 0 || s.team === unit.team) continue;
+      const d = dist2(unit.x, unit.y, s.x, s.y);
+      if(d < bd){ bd = d; best = s; }
+    }
+    return best;
+  }
+
+  function update(dt){
+    if(!game || game.phase !== 'battle') return;
+    game.time += dt;
+    game.cameraShake = Math.max(0, game.cameraShake - dt * 18);
+
+    const energyRate = game.time > 65 ? 1.75 : 1.05;
+    game.energy = Math.min(10, game.energy + dt * energyRate);
+
+    const battle = currentBattle();
+    battle.waves.forEach((wave, i) => {
+      if(!game.spawned[i] && game.time >= wave.t){
+        game.spawned[i] = true;
+        spawnWave(wave);
+      }
+    });
+
+    updateUnits(dt);
+    updateStructures(dt);
+    updateProjectiles(dt);
+    updateParticles(dt);
+    cleanup();
+    checkOutcome();
+  }
+
+  function updateUnits(dt){
+    for(const u of game.units){
+      if(u.dead) continue;
+      u.attackTimer -= dt;
+      u.bob += dt * 9;
+      let target = nearestEnemyUnit(u);
+      if(!target) target = nearestEnemyStructure(u);
+      if(!target) continue;
+      const tx = target.x;
+      const ty = target.y;
+      const tr = target.r || 18;
+      const dx = tx - u.x;
+      const dy = ty - u.y;
+      const d = Math.max(.001, Math.sqrt(dx*dx + dy*dy));
+      const wanted = u.range + tr * .7;
+      if(d > wanted){
+        const laneBias = bridgeBias(u, target);
+        u.x += (dx / d) * u.speed * dt + laneBias.x * dt;
+        u.y += (dy / d) * u.speed * dt + laneBias.y * dt;
+        u.x = clamp(u.x, 16, W-16);
+        u.y = clamp(u.y, 74, H-150);
+      } else if(u.attackTimer <= 0){
+        u.attackTimer = u.atk;
+        if(u.type === 'candleImp'){
+          game.projectiles.push({ x:u.x, y:u.y, tx:target.x, ty:target.y, targetId:target.id, team:u.team, dmg:u.dmg, life:.7, maxLife:.7, color:'#ffb347', r:4 });
+          puff(u.x, u.y-8, '#ffb347', 4);
+        } else {
+          damage(target, u.dmg, u);
+          slash(u.x, u.y, target.x, target.y, u.team === 'player' ? '#dfff9d' : '#ff8f70');
+        }
+      }
+    }
+  }
+
+  function bridgeBias(u, target){
+    const riverY = H * .47;
+    if(Math.abs(u.y - riverY) > 85) return {x:0,y:0};
+    const bridges = [W*.34, W*.66];
+    const nearestBridge = Math.abs(u.x - bridges[0]) < Math.abs(u.x - bridges[1]) ? bridges[0] : bridges[1];
+    return { x:(nearestBridge - u.x) * .55, y:0 };
+  }
+
+  function updateStructures(dt){
+    for(const s of game.structures){
+      if(s.dead || s.kind !== 'tower') continue;
+      s.attackTimer -= dt;
+      if(s.attackTimer > 0) continue;
+      let target = null;
+      let bd = Infinity;
+      for(const u of game.units){
+        if(u.dead || u.team === s.team) continue;
+        const d = dist2(s.x, s.y, u.x, u.y);
+        if(d < s.range*s.range && d < bd){ bd=d; target=u; }
+      }
+      if(target){
+        s.attackTimer = s.cd;
+        game.projectiles.push({ x:s.x, y:s.y, tx:target.x, ty:target.y, targetId:target.id, team:s.team, dmg:s.dmg, life:.45, maxLife:.45, color:s.team === 'player' ? '#74d7ff' : '#ff5f73', r:3.5 });
+      }
+    }
+  }
+
+  function updateProjectiles(dt){
+    for(const p of game.projectiles){
+      p.life -= dt;
+      const target = findById(p.targetId);
+      if(target && !target.dead){
+        p.tx = target.x; p.ty = target.y;
+      }
+      const t = 1 - Math.max(0, p.life) / p.maxLife;
+      p.cx = lerp(p.x, p.tx, easeOut(t));
+      p.cy = lerp(p.y, p.ty, easeOut(t)) - Math.sin(t * Math.PI) * 22;
+      if(p.life <= 0){
+        p.dead = true;
+        if(target && !target.dead) damage(target, p.dmg, null);
+        puff(p.tx, p.ty, p.color, 5);
+      }
+    }
+  }
+
+  function updateParticles(dt){
+    for(const p of game.particles){
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += 25 * dt;
+    }
+  }
+
+  function findById(id){
+    for(const u of game.units) if(u.id === id) return u;
+    for(const s of game.structures) if(s.id === id) return s;
+    return null;
+  }
+
+  function damage(target, amount, source){
+    if(!target || target.dead) return;
+    target.hp -= amount;
+    if(target.hp <= 0){
+      target.hp = 0;
+      target.dead = true;
+      game.cameraShake = Math.max(game.cameraShake, target.kind ? 7 : 3);
+      puff(target.x, target.y, target.team === 'player' ? '#74d7ff' : '#ff8f70', target.kind ? 22 : 12);
+      if(target.kind === 'tower') showToast((target.team === 'enemy' ? 'Enemy' : 'Your') + ' tower destroyed!', 1000);
+    } else {
+      puff(target.x, target.y, target.team === 'player' ? '#74d7ff' : '#ff5f73', 3);
+    }
+  }
+
+  function cleanup(){
+    game.units = game.units.filter(u => !u.dead || u.hp > 0 && u.y > -50 && u.y < H+50);
+    game.projectiles = game.projectiles.filter(p => !p.dead);
+    game.particles = game.particles.filter(p => p.life > 0);
+  }
+
+  function checkOutcome(){
+    const enemyCore = game.structures.find(s => s.id === 'enemyCore');
+    const playerCore = game.structures.find(s => s.id === 'playerCore');
+    if(enemyCore && enemyCore.dead){
+      game.phase = 'ended';
+      setTimeout(showReward, 650);
+    } else if(playerCore && playerCore.dead){
+      game.phase = 'ended';
+      setTimeout(showDefeat, 650);
+    }
+  }
+
+  function draw(){
+    ctx.save();
+    ctx.clearRect(0,0,W,H);
+    if(game && game.cameraShake > 0){
+      ctx.translate(rand(-game.cameraShake, game.cameraShake), rand(-game.cameraShake, game.cameraShake));
+    }
+    drawArena();
+    if(game){
+      drawStructures();
+      drawUnits();
+      drawProjectiles();
+      drawParticles();
+      if(game.phase === 'battle' && pointer.active) drawDeployGhost();
+    }
+    ctx.restore();
+    drawHudValues();
+  }
+
+  function drawArena(){
+    const grd = ctx.createLinearGradient(0,0,0,H);
+    grd.addColorStop(0,'#111127');
+    grd.addColorStop(.22,'#171633');
+    grd.addColorStop(.5,'#0c1d18');
+    grd.addColorStop(.78,'#15152c');
+    grd.addColorStop(1,'#090915');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0,0,W,H);
+
+    ctx.save();
+    ctx.globalAlpha=.42;
+    ctx.fillStyle='#e9e0ff';
+    circle(W*.78, 82, 42);
+    ctx.globalAlpha=.16;
+    for(let i=0;i<28;i++){
+      ctx.fillStyle = i%2 ? '#b58cff' : '#7cff9b';
+      circle((i*71 + 19) % W, 80 + (i*97)%Math.max(1,H-230), 1.2 + (i%3));
+    }
+    ctx.restore();
+
+    drawTrees();
+    drawTiles();
+    drawRiver();
+    drawDeployZone();
+  }
+
+  function drawTrees(){
+    ctx.save();
+    ctx.globalAlpha=.55;
+    for(let i=0;i<9;i++){
+      const side = i%2 ? W-16 : 16;
+      const y = 130 + i*72;
+      ctx.strokeStyle='rgba(4,4,10,.9)';
+      ctx.lineWidth=8;
+      ctx.beginPath();
+      ctx.moveTo(side,y+55); ctx.lineTo(side + (i%2?-26:26), y); ctx.stroke();
+      ctx.lineWidth=3;
+      for(let b=0;b<3;b++){
+        ctx.beginPath();
+        ctx.moveTo(side + (i%2?-18:18), y+14+b*10);
+        ctx.lineTo(side + (i%2?-52-rand(0,0):52), y-4+b*13);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawTiles(){
+    ctx.save();
+    ctx.globalAlpha=.22;
+    ctx.strokeStyle='rgba(255,255,255,.14)';
+    ctx.lineWidth=1;
+    for(let y=118; y<H-140; y+=52){
+      ctx.beginPath(); ctx.moveTo(24,y); ctx.lineTo(W-24,y); ctx.stroke();
+    }
+    for(let x=48; x<W; x+=56){
+      ctx.beginPath(); ctx.moveTo(x,106); ctx.lineTo(x,H-148); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawRiver(){
+    const y = H*.47;
+    ctx.save();
+    const g = ctx.createLinearGradient(0,y-34,0,y+34);
+    g.addColorStop(0,'rgba(25,255,135,.05)');
+    g.addColorStop(.5,'rgba(69,255,146,.38)');
+    g.addColorStop(1,'rgba(25,255,135,.05)');
+    ctx.fillStyle=g;
+    ctx.fillRect(0,y-34,W,68);
+    ctx.globalAlpha=.7;
+    ctx.strokeStyle='rgba(124,255,155,.55)';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    for(let x=0;x<=W;x+=18){
+      const yy = y + Math.sin((x + performance.now()*.04)*.04)*8;
+      if(x===0) ctx.moveTo(x,yy); else ctx.lineTo(x,yy);
+    }
+    ctx.stroke();
+    [W*.34,W*.66].forEach(bx => {
+      ctx.fillStyle='rgba(77,45,28,.92)';
+      roundRect(bx-34,y-45,68,90,12,true,false);
+      ctx.strokeStyle='rgba(255,209,102,.25)';
+      ctx.lineWidth=2;
+      roundRect(bx-34,y-45,68,90,12,false,true);
+    });
+    ctx.restore();
+  }
+
+  function drawDeployZone(){
+    const top = H*.55;
+    const bottom = H-142;
+    ctx.save();
+    ctx.fillStyle='rgba(116,215,255,.055)';
+    ctx.fillRect(0,top,W,bottom-top);
+    ctx.strokeStyle='rgba(116,215,255,.16)';
+    ctx.setLineDash([8,8]);
+    ctx.strokeRect(18,top+8,W-36,bottom-top-18);
+    ctx.setLineDash([]);
+    ctx.globalAlpha=.7;
+    ctx.fillStyle='rgba(255,255,255,.24)';
+    ctx.font='900 11px system-ui';
+    ctx.textAlign='center';
+    ctx.fillText('YOUR DEPLOYMENT HALF', W/2, top+25);
+    ctx.restore();
+  }
+
+  function drawStructures(){
+    for(const s of game.structures){
+      const pct = s.hp / Math.max(1, s.maxHp);
+      ctx.save();
+      ctx.globalAlpha = s.dead ? .35 : 1;
+      const enemy = s.team === 'enemy';
+      ctx.fillStyle = enemy ? '#4d263e' : '#1d4360';
+      ctx.strokeStyle = enemy ? '#ff8f70' : '#74d7ff';
+      ctx.lineWidth = 2;
+      if(s.kind === 'core'){
+        drawGate(s.x, s.y, enemy, s.dead);
+      } else {
+        drawTower(s.x, s.y, enemy, s.dead);
+      }
+      drawHealth(s.x, s.y - (s.kind === 'core' ? 44 : 36), 58, pct, enemy ? '#ff5f73' : '#74d7ff');
+      ctx.restore();
+    }
+  }
+
+  function drawGate(x,y,enemy,dead){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.fillStyle = enemy ? '#351f35' : '#17344c';
+    ctx.strokeStyle = enemy ? '#ff8f70' : '#74d7ff';
+    roundRect(-38,-28,76,58,12,true,true);
+    ctx.fillStyle = enemy ? '#1b0d18' : '#071a27';
+    roundRect(-20,-15,40,43,10,true,false);
+    ctx.fillStyle = dead ? '#222' : (enemy ? '#ffd166' : '#7cff9b');
+    circle(0,-35,8);
+    ctx.fillStyle='rgba(255,255,255,.25)';
+    ctx.font='900 10px system-ui'; ctx.textAlign='center';
+    ctx.fillText(enemy ? 'ENEMY' : 'YOUR',0,4);
+    ctx.restore();
+  }
+
+  function drawTower(x,y,enemy,dead){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.fillStyle = enemy ? '#52223b' : '#1f4b68';
+    ctx.strokeStyle = enemy ? '#ff8f70' : '#74d7ff';
+    roundRect(-25,-22,50,47,10,true,true);
+    ctx.fillStyle = enemy ? '#ff8f70' : '#74d7ff';
+    ctx.globalAlpha = dead ? .4 : .9;
+    circle(0,-25,8);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle='rgba(0,0,0,.25)';
+    ctx.fillRect(-17,-4,34,23);
+    ctx.restore();
+  }
+
+  function drawUnits(){
+    const sorted = game.units.slice().sort((a,b)=>a.y-b.y);
+    for(const u of sorted){
+      if(u.dead) continue;
+      ctx.save();
+      ctx.translate(u.x, u.y);
+      drawShadow(0, u.r + 7, u.r + 9);
+      const bounce = Math.sin(u.bob) * 2;
+      ctx.translate(0,bounce);
+      if(u.type === 'graveGoblin') drawGraveGoblin(u);
+      else if(u.type === 'candleImp') drawCandleImp(u);
+      else if(u.type === 'enemyBruiser') drawBruiser(u);
+      else drawEnemyGoblin(u);
+      ctx.restore();
+      drawHealth(u.x, u.y - u.r - 18, 36, u.hp/u.maxHp, u.team === 'player' ? '#7cff9b' : '#ff5f73');
+    }
+  }
+
+  function drawGraveGoblin(u){
+    ctx.strokeStyle='#dfff9d'; ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(7,-2); ctx.lineTo(20,-11); ctx.stroke();
+    ctx.fillStyle='#68d47a'; circle(0,0,13);
+    ctx.fillStyle='#9cff9f'; circle(-5,-5,5); circle(5,-4,5);
+    ctx.fillStyle='#101'; circle(-5,-5,2); circle(5,-4,2);
+    ctx.fillStyle='#2c763f'; circle(-9,8,4); circle(9,8,4);
+    ctx.fillStyle='#f7ffe8';
+    triangle(-3,3,0,9,3,3);
+    ctx.strokeStyle='#295c35'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(-8,12); ctx.lineTo(-13,18); ctx.moveTo(8,12); ctx.lineTo(13,18); ctx.stroke();
+  }
+
+  function drawEnemyGoblin(u){
+    ctx.strokeStyle='#ff8f70'; ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(-7,-2); ctx.lineTo(-19,-10); ctx.stroke();
+    ctx.fillStyle='#8c446d'; circle(0,0,12);
+    ctx.fillStyle='#ffb3a6'; circle(-5,-5,4); circle(5,-4,4);
+    ctx.fillStyle='#18050b'; circle(-5,-5,2); circle(5,-4,2);
+    ctx.fillStyle='#32162a'; circle(-9,8,4); circle(9,8,4);
+  }
+
+  function drawBruiser(u){
+    ctx.fillStyle='#66345e'; circle(0,0,17);
+    ctx.fillStyle='#30102d'; circle(-12,8,5); circle(12,8,5);
+    ctx.fillStyle='#ffcf76'; circle(-6,-6,4); circle(6,-6,4);
+    ctx.fillStyle='#000'; circle(-6,-6,2); circle(6,-6,2);
+    ctx.strokeStyle='#ff8f70'; ctx.lineWidth=5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(10,-3); ctx.lineTo(22,10); ctx.stroke();
+  }
+
+  function drawCandleImp(u){
+    ctx.fillStyle='#fff1c2'; roundRect(-8,-10,16,24,7,true,false);
+    ctx.fillStyle='#ff8f70'; circle(0,-14,8);
+    ctx.fillStyle='#ffd166'; circle(0,-16,4);
+    ctx.fillStyle='#3b1721'; circle(-4,-3,2); circle(4,-3,2);
+    ctx.strokeStyle='#ffb347'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(8,2); ctx.lineTo(17,8); ctx.stroke();
+  }
+
+  function drawProjectiles(){
+    for(const p of game.projectiles){
+      ctx.save();
+      ctx.globalAlpha = .95;
+      ctx.fillStyle = p.color;
+      circle(p.cx || p.x, p.cy || p.y, p.r || 4);
+      ctx.globalAlpha = .25;
+      circle(p.cx || p.x, p.cy || p.y, (p.r || 4) * 2.5);
+      ctx.restore();
+    }
+  }
+
+  function drawParticles(){
+    for(const p of game.particles){
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+      ctx.fillStyle = p.color;
+      circle(p.x,p.y,p.r);
+      ctx.restore();
+    }
+  }
+
+  function drawDeployGhost(){
+    const ok = validDeploy(pointer.x, pointer.y) && game.energy >= 2;
+    ctx.save();
+    ctx.globalAlpha=.85;
+    ctx.strokeStyle = ok ? '#7cff9b' : '#ff5f73';
+    ctx.fillStyle = ok ? 'rgba(124,255,155,.16)' : 'rgba(255,95,115,.13)';
+    ctx.lineWidth=3;
+    circle(pointer.x, pointer.y, 28, true, true);
+    ctx.font='900 11px system-ui'; ctx.textAlign='center';
+    ctx.fillStyle= ok ? '#dfff9d' : '#ffd0d7';
+    ctx.fillText(ok ? 'DROP GOBLIN' : 'NO DEPLOY', pointer.x, pointer.y-35);
+    ctx.restore();
+  }
+
+  function drawHealth(x,y,w,pct,color){
+    pct = clamp(pct,0,1);
+    ctx.save();
+    ctx.fillStyle='rgba(0,0,0,.55)';
+    roundRect(x-w/2,y,w,6,3,true,false);
+    ctx.fillStyle=color;
+    roundRect(x-w/2,y,w*pct,6,3,true,false);
+    ctx.restore();
+  }
+
+  function drawShadow(x,y,r){
+    ctx.save();
+    ctx.globalAlpha=.28;
+    ctx.fillStyle='#000';
+    ctx.beginPath();
+    ctx.ellipse(x,y,r, r*.36,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawHudValues(){
+    if(!game){
+      energyFill.style.width = '50%'; energyText.textContent = '5/10';
+      enemyHpFill.style.width = '100%'; playerHpFill.style.width = '100%';
+      enemyHpText.textContent = '100%'; playerHpText.textContent = '100%';
+      return;
+    }
+    energyFill.style.width = (game.energy / 10 * 100).toFixed(0) + '%';
+    energyText.textContent = Math.floor(game.energy) + '/10';
+    const enemyCore = game.structures.find(s => s.id === 'enemyCore');
+    const playerCore = game.structures.find(s => s.id === 'playerCore');
+    const ep = enemyCore ? enemyCore.hp / enemyCore.maxHp : 0;
+    const pp = playerCore ? playerCore.hp / playerCore.maxHp : 0;
+    enemyHpFill.style.width = (ep*100).toFixed(0) + '%';
+    playerHpFill.style.width = (pp*100).toFixed(0) + '%';
+    enemyHpText.textContent = Math.max(0, Math.ceil(ep*100)) + '%';
+    playerHpText.textContent = Math.max(0, Math.ceil(pp*100)) + '%';
+    const battle = currentBattle();
+    battleNameEl.textContent = battle.name + (progress.battle >= battles.length ? ' +' : '');
+    battleSubEl.textContent = 'Goblin L' + progress.goblinLevel + '  |  Skulls ' + progress.skulls + '  |  Time ' + Math.floor(game.time) + 's';
+    if(performance.now() > toastUntil) messageEl.textContent = '';
+  }
+
+  function puff(x,y,color,count){
+    if(!game) return;
+    for(let i=0;i<count;i++){
+      game.particles.push({ x:x+rand(-4,4), y:y+rand(-4,4), vx:rand(-42,42), vy:rand(-70,25), r:rand(2,5), color, life:rand(.22,.58), maxLife:.58 });
+    }
+  }
+
+  function slash(x1,y1,x2,y2,color){
+    if(!game) return;
+    for(let i=0;i<5;i++){
+      game.particles.push({ x:lerp(x1,x2,.55)+rand(-8,8), y:lerp(y1,y2,.55)+rand(-8,8), vx:rand(-12,12), vy:rand(-30,15), r:rand(2,4), color, life:.18, maxLife:.18 });
+    }
+  }
+
+  function loop(now){
+    const dt = Math.min(.05, (now-last)/1000 || .016);
+    last = now;
+    update(dt);
+    draw();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function posFromEvent(e){
+    const rect = canvas.getBoundingClientRect();
+    return { x:e.clientX-rect.left, y:e.clientY-rect.top };
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    const p = posFromEvent(e);
+    pointer.x=p.x; pointer.y=p.y; pointer.active=true;
+    deployAt(p.x,p.y);
+  });
+  canvas.addEventListener('pointermove', e => {
+    const p = posFromEvent(e);
+    pointer.x=p.x; pointer.y=p.y; pointer.active=true;
+  });
+  canvas.addEventListener('pointerleave', () => { pointer.active=false; });
+  canvas.addEventListener('pointerup', () => { setTimeout(()=>pointer.active=false, 120); });
+
+  graveCard.addEventListener('click', () => {
+    game && (game.selected = 'graveGoblin');
+    graveCard.classList.add('selected');
+    showToast('Grave Goblin selected.', 700);
+  });
+  impCard.addEventListener('click', () => {
+    showToast('Candle Imp is enemy only for this build.', 1200);
+    impCard.classList.remove('shake'); void impCard.offsetWidth; impCard.classList.add('shake');
+  });
+  resetBtn.addEventListener('click', () => {
+    progress = defaultProgress();
+    saveProgress();
+    game = null;
+    showMenu();
+    showToast('Save reset.', 900);
+  });
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+
+  function dist2(x1,y1,x2,y2){ const dx=x2-x1, dy=y2-y1; return dx*dx+dy*dy; }
+  function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+  function rand(min,max){ return min + Math.random() * (max-min); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function easeOut(t){ return 1 - Math.pow(1-clamp(t,0,1), 3); }
+  function circle(x,y,r,fill,stroke){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); if(fill === false){} else ctx.fill(); if(stroke) ctx.stroke(); }
+  function triangle(x1,y1,x2,y2,x3,y3){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3); ctx.closePath(); ctx.fill(); }
+  function roundRect(x,y,w,h,r,fill,stroke){
+    const rr = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y); ctx.arcTo(x+w,y,x+w,y+h,rr); ctx.arcTo(x+w,y+h,x,y+h,rr); ctx.arcTo(x,y+h,x,y,rr); ctx.arcTo(x,y,x+w,y,rr); ctx.closePath();
+    if(fill) ctx.fill(); if(stroke) ctx.stroke();
+  }
+
+  resize();
+  showMenu();
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(loop);
+})();
+</script>
 </body>
 </html>
