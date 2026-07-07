@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#090512" />
-  <title>Nightmare Park: Monster Royale — V12 Clash Feel Upgrade</title>
+  <title>Nightmare Park: Monster Royale — V12.1 Card Dock Fix</title>
   <style>
     :root {
       --bg0:#090512;
@@ -72,15 +72,15 @@
   </style>
 </head>
 <body>
-  <div id="versionFlag">NIGHTMARE PARK V12 CLASH FEEL UPGRADE • ORGANIC MAP + ROLES</div>
+  <div id="versionFlag">NIGHTMARE PARK V12.1 CARD DOCK FIX • CARDS RESTORED</div>
   <canvas id="game" aria-label="Nightmare Park Monster Royale game canvas"></canvas>
-  <div id="fallbackText">Tap/drag a card, then drop in your half. Units now have roles, skills and buildings.</div>
+  <div id="fallbackText">CARD DOCK FIXED: tap/drag a card, then drop in your half.</div>
 
 <script>
 (() => {
   'use strict';
 
-  const BUILD = 'V12 CLASH FEEL UPGRADE';
+  const BUILD = 'V12.1 CARD DOCK FIX';
   const V = { w: 390, h: 844 };
   const FIELD = { x: 18, y: 74, w: 354, h: 584, bottom: 658, top: 74, mid: 366 };
   const LANES = [82, 195, 308];
@@ -999,7 +999,7 @@
     roundRect(FIELD.x + 10, FIELD.mid + 34, FIELD.w - 20, FIELD.bottom - FIELD.mid - 55, 26);
     ctx.fill();
     ctx.globalAlpha = .82;
-    ctx.font = '900 10px system-ui';
+    ctx.font = '900 8.5px system-ui';
     ctx.textAlign = 'center';
     ctx.fillStyle = enough ? '#e7ffe4' : '#ffd1d1';
     ctx.fillText('DROP ZONE • YOUR HAUNTED HALF', 195, FIELD.bottom - 35);
@@ -1013,6 +1013,14 @@
       ctx.stroke();
     }
     ctx.restore();
+  }
+
+  function drawTowers() {
+    const liveTowers = state.towers
+      .filter(t => t.hp > 0)
+      .slice()
+      .sort((a, b) => a.y - b.y);
+    for (const t of liveTowers) drawTower(t);
   }
 
   function drawTower(t) {
@@ -1161,6 +1169,14 @@
 
     drawHpBar(x - 26, y + 36, 52, 6, t.hp, t.maxHp, teamCol);
     ctx.restore();
+  }
+
+  function drawUnits() {
+    const liveUnits = state.units
+      .filter(u => u.hp > 0)
+      .slice()
+      .sort((a, b) => a.y - b.y);
+    for (const u of liveUnits) drawUnit(u);
   }
 
   function drawUnit(u) {
@@ -1567,7 +1583,7 @@
     ctx.fillText(state.suddenDeath ? 'SUDDEN DEATH' : mins + ':' + secs, 195, 92);
     ctx.font = '800 9px system-ui';
     ctx.fillStyle = 'rgba(255,255,255,.72)';
-    ctx.fillText('Organic map • roles • skills • buildings', 195, 108);
+    ctx.fillText('Cards fixed • organic map • roles • skills', 195, 108);
     ctx.restore();
   }
 
@@ -1606,6 +1622,54 @@
     ctx.fillStyle = '#fff';
     ctx.fillText('CURSED ENERGY ' + Math.floor(state.energy) + ' / 10', x + w / 2, y + 20);
     ctx.restore();
+  }
+
+  function drawCards() {
+    cardRects.length = 0;
+
+    const deckX = 10;
+    const deckY = 700;
+    const deckW = V.w - 20;
+    const deckH = 132;
+
+    ctx.save();
+    const panel = ctx.createLinearGradient(deckX, deckY, deckX, deckY + deckH);
+    panel.addColorStop(0, 'rgba(18,8,31,.94)');
+    panel.addColorStop(.55, 'rgba(8,4,15,.96)');
+    panel.addColorStop(1, 'rgba(3,2,7,.98)');
+    ctx.fillStyle = panel;
+    roundRect(deckX, deckY, deckW, deckH, 18);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,215,106,.28)';
+    ctx.lineWidth = 1.5;
+    roundRect(deckX, deckY, deckW, deckH, 18);
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.font = '900 8.5px system-ui';
+    ctx.fillStyle = '#ffd76a';
+    ctx.fillText('MONSTER CARDS', deckX + 12, deckY + 16);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255,255,255,.62)';
+    ctx.fillText('DRAG INTO YOUR HALF', deckX + deckW - 12, deckY + 16);
+    ctx.restore();
+
+    const gap = 6;
+    const w = (V.w - 32 - gap * 3) / 4;
+    const h = 48;
+    const startX = 16;
+    const startY = 720;
+
+    for (let i = 0; i < cards.length; i++) {
+      const row = Math.floor(i / 4);
+      const col = i % 4;
+      const x = startX + col * (w + gap);
+      const y = startY + row * (h + 7);
+      cardRects.push({ x, y, w, h });
+      drawCard(cards[i], x, y, w, h, state.selected === i);
+    }
+
+    if (state.dragging) drawDraggedCard(state.dragging.key, state.dragging.x, state.dragging.y);
   }
 
   function drawCard(key, x, y, w, h, selected) {
@@ -1694,14 +1758,14 @@
     ctx.stroke();
 
     ctx.globalAlpha = enough ? 1 : .35;
-    drawCardIcon(key, x + w / 2, y + 39, selected);
+    drawCardIcon(key, x + w / 2, y + 21, selected);
     ctx.textAlign = 'center';
-    ctx.font = '900 10px system-ui';
+    ctx.font = '900 8.5px system-ui';
     ctx.fillStyle = '#fff';
-    ctx.fillText(s.short.toUpperCase(), x + w / 2, y + 79);
-    ctx.font = '700 8px system-ui';
+    ctx.fillText(s.short.toUpperCase(), x + w / 2, y + 39);
+    ctx.font = '700 6.8px system-ui';
     ctx.fillStyle = 'rgba(255,255,255,.68)';
-    wrapTiny(s.desc, x + w / 2, y + 93, w - 8);
+    ctx.fillText((s.role || '').toUpperCase().slice(0, 13), x + w / 2, y + 47);
     ctx.globalAlpha = 1;
 
     ctx.fillStyle = enough ? '#79ff6a' : '#ff6b6b';
