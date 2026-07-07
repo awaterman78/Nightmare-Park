@@ -1,4 +1,5 @@
 import { CARD_LIBRARY } from '../data/cards.js';
+import { characterProfile } from '../data/characters.js';
 
 export class CardDock {
   constructor({ root, ghost, onSelect, onDrop }) {
@@ -62,9 +63,15 @@ export class CardDock {
       button.style.setProperty('--card-glow', card.cardGlow);
       button.style.setProperty('--card-top', card.colours[1]);
       button.style.setProperty('--card-bottom', '#0a0610');
+      const profile = characterProfile(card.characterId || card.id);
+      button.style.setProperty('--portrait-top', profile.portrait.top);
+      button.style.setProperty('--portrait-bottom', profile.portrait.bottom);
+      button.style.setProperty('--portrait-accent', profile.portrait.accent);
       button.innerHTML = `
         <span class="card__cost">${card.cost}</span>
-        <span class="card__icon" aria-hidden="true">${card.icon}</span>
+        <span class="card__portrait card__portrait--${card.characterId || card.id}" aria-hidden="true">
+          ${this.renderPortrait(card, profile)}
+        </span>
         <span class="card__name">${card.shortName}</span>
         <span class="card__role">${card.role}</span>
       `;
@@ -72,6 +79,20 @@ export class CardDock {
       this.root.appendChild(button);
     }
     this.renderNextCard();
+  }
+
+
+  renderPortrait(card, profile) {
+    const id = card.characterId || card.id;
+    if (card.kind === 'building') return `<span class="portrait-building"><span></span></span>`;
+    if (id === 'bruteClown') return `<span class="portrait-clown"><i></i><b></b></span>`;
+    if (id === 'werewolfRunner') return `<span class="portrait-wolf"><i></i><b></b></span>`;
+    if (id === 'midnightWitch') return `<span class="portrait-witch"><i></i><b></b></span>`;
+    if (id === 'skeletonSwarm' || id === 'summonedSkeleton') return `<span class="portrait-bones"><i></i><b></b></span>`;
+    if (id === 'gargoyle') return `<span class="portrait-gargoyle"><i></i><b></b></span>`;
+    if (id === 'pumpkinCatapult') return `<span class="portrait-pumpkin"><i></i><b></b></span>`;
+    if (id === 'graveGoblin') return `<span class="portrait-goblin"><i></i><b></b></span>`;
+    return `<span class="portrait-generic">${card.icon}</span>`;
   }
 
   renderNextCard() {

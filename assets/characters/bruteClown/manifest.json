@@ -1,0 +1,6 @@
+{
+  "id": "bruteClown",
+  "pipeline": "V18",
+  "status": "procedural-canvas-rig-active",
+  "futureFiles": ["portrait.png", "idle.png", "walk.png", "attack.png", "special.png", "death.png"]
+}

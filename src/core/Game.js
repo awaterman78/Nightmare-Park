@@ -8,6 +8,7 @@ import { CombatSystem } from '../systems/CombatSystem.js';
 import { AISystem } from '../systems/AISystem.js';
 import { CardCycleSystem } from '../systems/CardCycleSystem.js';
 import { AtmosphereSystem } from '../systems/AtmosphereSystem.js';
+import { CharacterMotionSystem } from '../systems/CharacterMotionSystem.js';
 
 export class Game {
   constructor({ renderer, hud, cardDock }) {
@@ -20,6 +21,7 @@ export class Game {
     this.combat = new CombatSystem();
     this.ai = new AISystem();
     this.atmosphere = new AtmosphereSystem();
+    this.characterMotion = new CharacterMotionSystem();
     this.playerCycle = null;
     this.enemyCycle = null;
     this.effects = [];
@@ -63,7 +65,7 @@ export class Game {
     this.cardDock?.setHand(this.state.playerHand);
     this.cardDock?.setNextCard(this.state.playerNextCard);
     this.cardDock?.clearSelected();
-    this.hud?.pushMessage('V17 loaded: defence buildings, custom slots and upgraded monster motion.');
+    this.hud?.pushMessage('V18 loaded: character asset pipeline, motion rigs and cinematic monster movement.');
   }
 
   update(dt) {
@@ -83,7 +85,9 @@ export class Game {
       this.economy.update(this, dt);
       this.ai.update(this, dt);
       this.combat.update(this, dt);
+      this.characterMotion.update(this, dt);
     } else {
+      this.characterMotion.update(this, dt);
       for (const effect of this.effects) effect.update(dt);
       this.effects = this.effects.filter(effect => effect.alive);
     }

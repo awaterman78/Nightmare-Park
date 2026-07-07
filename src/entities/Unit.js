@@ -27,11 +27,28 @@ export class Unit {
     this.navSegment = 0;
     this.animTime = Math.random() * 2.5;
     this.visualSeed = Math.random() * Math.PI * 2;
+    this.skinId = card.characterId || card.id;
     this.attackAnim = 0;
     this.spawnAnim = 0.38;
     this.abilityPulse = 0;
     this.lastX = 0;
     this.lastY = 0;
+    this.routeTangent = { x: 0, y: team === TEAM.PLAYER ? -1 : 1 };
+    this.routeNormal = { x: 1, y: 0 };
+    this.motion = {
+      profileId: this.skinId,
+      state: 'spawn',
+      stride: Math.random() * Math.PI * 2,
+      breath: Math.random() * Math.PI * 2,
+      lean: 0,
+      speedNorm: 0,
+      attackWeight: 0,
+      specialWeight: 0,
+      spawnWeight: 1,
+      footstepTimer: 0,
+      trailTimer: 0,
+      trail: []
+    };
   }
 
   syncPosition(map) {
@@ -43,6 +60,8 @@ export class Unit {
     this.lastY = this.y;
     this.x = sample.point.x + sample.normal.x * sideOffset;
     this.y = sample.point.y + sample.normal.y * sideOffset + (this.card.flying ? -14 : 0);
+    this.routeTangent = sample.tangent;
+    this.routeNormal = sample.normal;
     this.navSegment = sample.segmentIndex;
   }
 

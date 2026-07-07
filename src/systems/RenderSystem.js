@@ -4,6 +4,7 @@ import { MAP_IMAGE_DATA_URI } from '../data/mapImage.js';
 import { CARD_LIBRARY } from '../data/cards.js';
 import { ATMOSPHERE } from '../data/atmosphere.js';
 import { DEFENSE_LIBRARY } from '../data/defenses.js';
+import { characterProfile } from '../data/characters.js';
 
 export class RenderSystem {
   constructor(canvas) {
@@ -560,6 +561,14 @@ export class RenderSystem {
     const g = (bigint >> 8) & 255;
     const b = bigint & 255;
     return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  normaliseEffectColour(colour, alpha = 0.2) {
+    if (!colour) return `rgba(255,255,255,${alpha})`;
+    if (colour.startsWith('rgba(')) return colour.replace(/rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/, `rgba($1,$2,$3,${alpha})`);
+    if (colour.startsWith('rgb(')) return colour.replace('rgb(', 'rgba(').replace(')', `,${alpha})`);
+    if (colour.startsWith('#')) return this.hexToRgba(colour, alpha);
+    return colour;
   }
 
   withAlpha(rgba, alpha) {
@@ -1190,14 +1199,16 @@ export class RenderSystem {
 
   drawUnit(ctx, unit, game) {
     const [primary, dark] = unit.card.colours;
-    const anim = this.unitAnim(unit, game);
+    const profile = characterProfile(unit.skinId || unit.cardId);
+    const anim = this.unitAnim(unit, game, profile);
 
+    this.drawUnitMotionTrail(ctx, unit, primary, anim, profile);
     this.drawUnitShadow(ctx, unit, primary, anim);
 
     ctx.save();
     ctx.translate(unit.x, unit.y + anim.bob - anim.spawnLift);
-    ctx.scale((unit.facing || 1) * anim.spawnScale, anim.spawnScale * anim.squashY);
-    ctx.rotate(anim.lean);
+    ctx.scale((unit.facing || 1) * anim.spawnScale * anim.profileScale, anim.spawnScale * anim.squashY * anim.profileScale);
+    ctx.rotate(anim.lean + anim.routeLean);
 
     if (unit.spawnAnim > 0) {
       ctx.globalAlpha = clamp(1 - unit.spawnAnim / 0.38, 0.2, 1);
@@ -1218,7 +1229,8 @@ export class RenderSystem {
       ctx.shadowBlur = unit.card.flying ? 18 : 8;
     }
 
-    this.drawUnitAura(ctx, unit, primary, anim);
+    this.drawUnitAura(ctx, unit, primary, anim, profile);
+    this.drawAttackAnticipation(ctx, unit, primary, anim, profile);
 
     switch (unit.cardId) {
       case 'bruteClown': this.drawBruteClown(ctx, unit, primary, dark, anim); break;
@@ -1238,30 +1250,128 @@ export class RenderSystem {
     this.healthBar(ctx, unit, unit.x - unit.radius - 6, unit.y - unit.radius - 18 + anim.bob, unit.radius * 2 + 12, 4, primary);
   }
 
-  unitAnim(unit, game) {
+  unitAnim(unit, game, profile = characterProfile(unit.skinId || unit.cardId)) {
     const time = unit.animTime || game.state?.elapsed || 0;
+    const motion = unit.motion || {};
     const speed = unit.card.speed || 20;
-    const cadence = speed > 40 ? 12 : speed > 30 ? 9 : speed > 18 ? 6 : 4.3;
-    const step = time * cadence + unit.visualSeed;
+    const cadence = profile.motion?.cadence || (speed > 40 ? 12 : speed > 30 ? 9 : speed > 18 ? 6 : 4.3);
+    const step = (motion.stride || time * cadence) + unit.visualSeed;
+    const breath = (motion.breath || time) + unit.visualSeed;
     const attack = clamp((unit.attackAnim || 0) / (unit.card.attackType === 'melee' ? 0.22 : 0.38), 0, 1);
     const spawn = clamp((unit.spawnAnim || 0) / 0.38, 0, 1);
     const flying = unit.card.flying ? 1 : 0;
+    const speedNorm = motion.speedNorm || 0;
+    const state = motion.state || 'idle';
+    const locomotion = profile.motion?.locomotion || 'walk';
+    const profileBob = profile.motion?.bob ?? 1.8;
+
+    let bob = Math.sin(step) * (profileBob * (0.45 + speedNorm * 0.55));
+    let squash = 1 + Math.sin(step * 2) * (flying ? 0.012 : 0.03) - attack * 0.04;
+    let routeLean = motion.lean || 0;
+
+    if (locomotion === 'hover') {
+      bob = Math.sin(time * 3.6 + unit.visualSeed) * profileBob + Math.sin(time * 7.4) * 0.8;
+      squash = 1 + Math.sin(breath) * 0.015;
+      routeLean *= 0.45;
+    } else if (locomotion === 'flap') {
+      bob = Math.sin(time * 5.3 + unit.visualSeed) * profileBob;
+      squash = 1 + Math.sin(time * 12) * 0.018;
+    } else if (locomotion === 'stomp') {
+      bob = Math.max(-1.3, Math.sin(step)) * profileBob * 0.75;
+      squash = 1 + Math.abs(Math.sin(step)) * 0.035 - attack * 0.05;
+    } else if (locomotion === 'pounce') {
+      bob = Math.sin(step) * profileBob + Math.max(0, Math.sin(step * 0.5)) * 1.8;
+      squash = 1 + Math.sin(step * 2) * 0.045 - attack * 0.06;
+    } else if (locomotion === 'skitter' || locomotion === 'scuttle') {
+      bob = Math.sin(step * 1.3) * profileBob * 0.75 + Math.sin(time * 19 + unit.visualSeed) * 0.45;
+      squash = 1 + Math.sin(step * 3) * 0.035;
+    } else if (locomotion === 'trundle') {
+      bob = Math.sin(step) * 0.7;
+      routeLean *= 0.35;
+    }
+
+    const anticipation = attack > 0.08 ? Math.sin(attack * Math.PI) : 0;
+    const hitJolt = unit.hitFlash > 0 ? Math.sin(unit.hitFlash * 90) * 0.08 : 0;
+
     return {
       time,
+      state,
       step,
       attack,
       spawn,
-      bob: flying ? Math.sin(time * 4.2 + unit.visualSeed) * 5 : Math.sin(step) * (speed > 35 ? 2.4 : 1.5),
-      lean: (unit.team === TEAM.PLAYER ? -0.04 : 0.04) + Math.sin(step * 0.5) * (speed > 35 ? 0.08 : 0.035),
-      squashY: 1 + Math.sin(step * 2) * (flying ? 0.015 : 0.035) - attack * 0.04,
+      bob,
+      routeLean,
+      lean: (unit.team === TEAM.PLAYER ? -0.025 : 0.025) + Math.sin(step * 0.5) * (profile.motion?.lean || 0.04) * 0.45 + hitJolt,
+      squashY: squash,
       limb: Math.sin(step),
       limb2: Math.sin(step + Math.PI),
       flap: Math.sin(time * 13 + unit.visualSeed),
       spawnLift: spawn * 14,
       spawnScale: 1 + spawn * 0.18,
       ability: clamp((unit.abilityPulse || 0) / 0.72, 0, 1),
-      hurt: clamp(unit.hitFlash / 0.16, 0, 1)
+      hurt: clamp(unit.hitFlash / 0.16, 0, 1),
+      speedNorm,
+      anticipation,
+      profileScale: profile.scale || 1,
+      locomotion
     };
+  }
+
+  drawUnitMotionTrail(ctx, unit, primary, anim, profile) {
+    const trail = unit.motion?.trail || [];
+    if (!trail.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const ghost of trail.slice().reverse()) {
+      const alpha = clamp(ghost.life / ghost.maxLife, 0, 1) * (unit.card.flying ? 0.18 : unit.frenzied ? 0.28 : 0.16);
+      ctx.save();
+      ctx.translate(ghost.x, ghost.y + anim.bob * 0.25);
+      ctx.scale((ghost.facing || unit.facing || 1) * (profile.scale || 1), profile.scale || 1);
+      ctx.fillStyle = this.hexToRgba(primary, alpha);
+      ctx.strokeStyle = this.hexToRgba(profile.signature?.vfx || primary, alpha * 1.3);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      if (unit.card.flying) {
+        ctx.ellipse(0, -2, unit.radius * 2.0, unit.radius * 0.86, 0, 0, Math.PI * 2);
+      } else {
+        ctx.ellipse(0, 2, unit.radius * 1.25, unit.radius * 1.05, 0, 0, Math.PI * 2);
+      }
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+
+  drawAttackAnticipation(ctx, unit, primary, anim, profile) {
+    if (anim.attack <= 0.03 && anim.ability <= 0.04 && !unit.frenzied) return;
+    const vfx = profile.signature?.vfx || primary;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    if (anim.attack > 0.03) {
+      const a = Math.sin(anim.attack * Math.PI);
+      ctx.strokeStyle = this.hexToRgba(vfx, 0.18 + a * 0.26);
+      ctx.lineWidth = unit.card.attackType === 'melee' ? 2.5 : 1.7;
+      ctx.beginPath();
+      if (unit.card.attackType === 'melee') {
+        ctx.arc(8 + a * 10, -1, unit.radius + 8 + a * 8, -0.78, 0.78);
+      } else {
+        ctx.ellipse(0, -4, unit.radius + 10 + a * 7, unit.radius * 0.75 + a * 4, 0, 0, Math.PI * 2);
+      }
+      ctx.stroke();
+    }
+    if (unit.frenzied || anim.ability > 0.05) {
+      const pulse = unit.frenzied ? 1 : anim.ability;
+      ctx.strokeStyle = this.hexToRgba(unit.frenzied ? '#ffd86f' : vfx, 0.12 + pulse * 0.22);
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([3, 5]);
+      ctx.beginPath();
+      ctx.ellipse(0, 5, unit.radius + 13 + pulse * 8, unit.radius * 0.75 + 7, Math.sin(anim.time) * 0.2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
   }
 
   drawUnitShadow(ctx, unit, primary, anim) {
@@ -1282,11 +1392,11 @@ export class RenderSystem {
     ctx.restore();
   }
 
-  drawUnitAura(ctx, unit, primary, anim) {
+  drawUnitAura(ctx, unit, primary, anim, profile = characterProfile(unit.skinId || unit.cardId)) {
     if (!unit.frenzied && anim.ability <= 0.02 && !unit.card.flying) return;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = this.hexToRgba(unit.frenzied ? '#ffd86f' : primary, unit.frenzied ? 0.42 : 0.22 + anim.ability * 0.24);
+    ctx.strokeStyle = this.hexToRgba(unit.frenzied ? '#ffd86f' : (profile.signature?.vfx || primary), unit.frenzied ? 0.42 : 0.22 + anim.ability * 0.24);
     ctx.lineWidth = unit.frenzied ? 2.5 : 1.5;
     ctx.beginPath();
     ctx.ellipse(0, 2, unit.radius + 6 + anim.ability * 9, unit.radius + 4 + anim.ability * 5, 0, 0, Math.PI * 2);
@@ -1724,6 +1834,35 @@ export class RenderSystem {
     ctx.save();
     const alpha = clamp(effect.life / effect.maxLife, 0, 1);
     ctx.globalAlpha = alpha;
+    if (effect.type === 'dust' || effect.type === 'stompDust') {
+      ctx.translate(effect.x, effect.y);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = this.normaliseEffectColour(effect.colour, effect.type === 'stompDust' ? 0.18 : 0.12);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, effect.size * (1.2 - alpha * 0.15), effect.size * 0.34, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (effect.type === 'stompDust') {
+        ctx.strokeStyle = this.normaliseEffectColour(effect.colour, 0.26);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, effect.size * (1.15 + (1 - alpha) * 0.8), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
+    if (effect.type === 'airwake') {
+      ctx.translate(effect.x, effect.y);
+      ctx.rotate(effect.angle || 0);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = this.normaliseEffectColour(effect.colour, 0.18);
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, effect.size * 1.6, effect.size * 0.42, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+      return;
+    }
     if (effect.type === 'burst') {
       ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = effect.colour;
@@ -1778,7 +1917,7 @@ export class RenderSystem {
     ctx.fillText(game.state.over === 'victory' ? 'Bones earned. Enemy brain beaten.' : 'Enemy brain controlled the park.', VIEW.width / 2, 374);
     ctx.font = '800 11px Inter, system-ui';
     ctx.fillStyle = 'rgba(255,255,255,.72)';
-    ctx.fillText('V17: custom defence buildings and upgraded monster motion.', VIEW.width / 2, 398);
+    ctx.fillText('V18: character pipeline, motion rigs and cinematic monster feedback.', VIEW.width / 2, 398);
     ctx.restore();
   }
 

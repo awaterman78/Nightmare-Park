@@ -1,4 +1,4 @@
-export const BUILD = 'V17 DEFENCE BUILDINGS + CHARACTER MOTION';
+export const BUILD = 'V18 CHARACTER ASSET PIPELINE + CINEMATIC MOTION';
 
 export const VIEW = Object.freeze({
   width: 390,
