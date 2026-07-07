@@ -1,6 +1,6 @@
 {
-  "name": "nightmare-park-v14-map-navmesh",
-  "version": "14.0.0",
+  "name": "nightmare-park-v14-2-embedded-map-navmesh",
+  "version": "14.2.0",
   "type": "module",
   "private": true,
   "scripts": {

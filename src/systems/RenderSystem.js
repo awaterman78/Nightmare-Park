@@ -1,5 +1,6 @@
 import { FIELD, TEAM, VIEW } from '../core/constants.js';
 import { clamp } from '../core/math.js';
+import { MAP_IMAGE_DATA_URI } from '../data/mapImage.js';
 
 export class RenderSystem {
   constructor(canvas) {
@@ -18,7 +19,8 @@ export class RenderSystem {
       'assets/maps/nightmare_park_arena_v14_4k.jpg',
       './nightmare_park_arena_v14_4k.jpg',
       'nightmare_park_arena_v14_4k.jpg',
-      `${window.location.pathname.replace(/[^/]*$/, '')}assets/maps/nightmare_park_arena_v14_4k.jpg`
+      `${window.location.pathname.replace(/[^/]*$/, '')}assets/maps/nightmare_park_arena_v14_4k.jpg`,
+      MAP_IMAGE_DATA_URI
     ];
     this.mapImage.onload = () => {
       this.mapImageLoaded = true;
@@ -30,7 +32,7 @@ export class RenderSystem {
         this.mapImage.src = this.mapImageCandidates[this.mapImageAttempt];
       } else {
         this.mapImageFailed = true;
-        console.warn('Nightmare Park map asset failed to load. Expected assets/maps/nightmare_park_arena_v14_4k.jpg');
+        console.warn('Nightmare Park map asset path failed; embedded backup also failed unexpectedly.');
       }
     };
     this.mapImage.src = this.mapImageCandidates[0];
@@ -165,7 +167,7 @@ export class RenderSystem {
     ctx.textAlign = 'center';
     ctx.fillStyle = this.mapImageFailed ? '#ff8fac' : '#a7ffca';
     ctx.fillText(
-      this.mapImageFailed ? 'MAP ASSET MISSING: upload assets/maps/nightmare_park_arena_v14_4k.jpg' : 'LOADING 4K MAP...',
+      this.mapImageFailed ? 'MAP ASSET PATH MISSING — USING EMBEDDED 4K BACKUP' : 'LOADING 4K MAP...',
       FIELD.x + FIELD.width / 2,
       FIELD.y + 46
     );
