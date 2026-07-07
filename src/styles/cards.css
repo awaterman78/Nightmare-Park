@@ -1,0 +1,114 @@
+#card-dock {
+  position: fixed;
+  z-index: 12;
+  left: 50%;
+  bottom: max(8px, var(--safe-bottom));
+  transform: translateX(-50%);
+  width: min(98vw, 520px);
+  min-height: 138px;
+  padding: 10px 10px 12px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(74px, 1fr);
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  border-top: 1px solid rgba(255,255,255,.16);
+  border-left: 1px solid rgba(255,255,255,.10);
+  border-right: 1px solid rgba(255,255,255,.10);
+  border-radius: 22px 22px 0 0;
+  background: linear-gradient(180deg, rgba(24, 12, 38, .86), rgba(6, 4, 11, .9));
+  box-shadow: 0 -12px 46px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.08);
+  touch-action: pan-x;
+}
+
+#card-dock::-webkit-scrollbar { display: none; }
+
+.card {
+  position: relative;
+  min-height: 116px;
+  padding: 8px 7px 7px;
+  border: 1px solid rgba(255,255,255,.17);
+  border-radius: 17px;
+  background:
+    radial-gradient(circle at 50% 18%, var(--card-glow), transparent 44%),
+    linear-gradient(180deg, var(--card-top), var(--card-bottom));
+  box-shadow: 0 10px 26px rgba(0,0,0,.38), inset 0 0 24px rgba(255,255,255,.04);
+  color: #fff;
+  text-align: left;
+  touch-action: none;
+  cursor: grab;
+}
+
+.card:active { cursor: grabbing; }
+.card.is-selected {
+  border-color: rgba(255, 216, 111, .85);
+  box-shadow: 0 0 0 2px rgba(255,216,111,.15), 0 0 28px rgba(255,216,111,.22), inset 0 0 24px rgba(255,255,255,.05);
+  transform: translateY(-5px);
+}
+.card.is-disabled { filter: grayscale(.7) brightness(.62); opacity: .72; }
+
+.card__cost {
+  position: absolute;
+  top: -7px;
+  left: -6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, #b8faff, #4ecbff 68%, #1d2c6c 100%);
+  color: #11051a;
+  font-size: 15px;
+  font-weight: 1000;
+  box-shadow: 0 4px 14px rgba(0,0,0,.5);
+}
+
+.card__icon {
+  width: 46px;
+  height: 40px;
+  margin: 5px auto 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(0,0,0,.24);
+  font-size: 28px;
+  text-shadow: 0 3px 8px #000;
+}
+
+.card__name {
+  min-height: 26px;
+  display: block;
+  font-size: 11px;
+  font-weight: 1000;
+  line-height: 1.03;
+  text-align: center;
+  text-shadow: 0 2px 8px #000;
+}
+
+.card__role {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255,216,111,.86);
+  font-size: 8px;
+  font-weight: 950;
+  letter-spacing: .07em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+#drag-ghost {
+  position: fixed;
+  z-index: 30;
+  width: 78px;
+  min-height: 108px;
+  padding: 8px;
+  transform: translate(-50%, -50%) scale(1.04);
+  border: 1px solid rgba(255,216,111,.82);
+  border-radius: 17px;
+  background: rgba(20,10,32,.86);
+  box-shadow: 0 12px 38px rgba(0,0,0,.62), 0 0 22px rgba(255,216,111,.24);
+  pointer-events: none;
+  text-align: center;
+}

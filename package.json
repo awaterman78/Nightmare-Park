@@ -1,0 +1,9 @@
+{
+  "name": "nightmare-park-v13-repo-build",
+  "version": "13.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "check": "node scripts/smoke-test.mjs"
+  }
+}
