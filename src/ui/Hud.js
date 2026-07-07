@@ -21,7 +21,7 @@ export class Hud {
     this.timerValue.textContent = game.state.suddenDeath ? 'SUDDEN' : formatTime(game.state.matchTimer);
     this.statusValue.textContent = game.state.over
       ? (game.state.over === 'victory' ? 'Enemy core destroyed' : 'Your core fell')
-      : (game.state.selectedCard ? 'Tap or drop in your half' : 'Pick a monster card');
+      : (game.state.selectedCard ? 'Green paths yes, cursed fog no' : `Enemy AI active: ${game.state.enemyPlays} plays`);
 
     const enemyCore = game.getCore(TEAM.ENEMY);
     this.enemyCoreValue.textContent = `${Math.ceil(enemyCore?.hp || 0)}`;
@@ -35,6 +35,6 @@ export class Hud {
     node.textContent = text;
     this.feedRoot.prepend(node);
     while (this.feedRoot.children.length > 3) this.feedRoot.lastElementChild.remove();
-    setTimeout(() => node.remove(), 2600);
+    setTimeout(() => node.remove(), 2800);
   }
 }

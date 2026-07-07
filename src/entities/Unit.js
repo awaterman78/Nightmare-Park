@@ -1,5 +1,5 @@
 import { TEAM } from '../core/constants.js';
-import { clamp, pointOnPolyline, uid } from '../core/math.js';
+import { clamp, samplePolyline, uid } from '../core/math.js';
 
 export class Unit {
   constructor({ card, team, laneIndex, progress, offset = 0, level = 1 }) {
@@ -22,16 +22,19 @@ export class Unit {
     this.dead = false;
     this.x = 0;
     this.y = 0;
-    this.facing = team === TEAM.PLAYER ? -1 : 1;
+    this.facing = team === TEAM.PLAYER ? 1 : -1;
     this.frenzied = false;
+    this.navSegment = 0;
   }
 
   syncPosition(map) {
     const lane = map.lanes[this.laneIndex];
-    const point = pointOnPolyline(lane.points, this.progress);
-    const wave = Math.sin((this.progress * 9 + this.offset) * Math.PI) * 5;
-    this.x = point.x + this.offset + wave * 0.35;
-    this.y = point.y + (this.card.flying ? -10 : 0);
+    const sample = samplePolyline(lane.points, this.progress);
+    const breathing = Math.sin((this.progress * 13 + this.offset * 0.08) * Math.PI) * 2.2;
+    const sideOffset = this.offset + breathing;
+    this.x = sample.point.x + sample.normal.x * sideOffset;
+    this.y = sample.point.y + sample.normal.y * sideOffset + (this.card.flying ? -14 : 0);
+    this.navSegment = sample.segmentIndex;
   }
 
   move(dt, map, suddenDeath = false) {

@@ -25,6 +25,7 @@ export class Game {
   reset() {
     this.effects = [];
     this.state = {
+      elapsed: 0,
       energy: GAME_RULES.startingEnergy,
       enemyEnergy: GAME_RULES.startingEnergy,
       selectedCard: null,
@@ -33,16 +34,18 @@ export class Game {
       buildings: [],
       towers: this.map.towers.map(data => new Tower(data)),
       projectiles: [],
-      aiTimer: 1.4,
+      aiTimer: 1.05,
+      enemyPlays: 0,
       matchTimer: GAME_RULES.matchSeconds,
       suddenDeath: false,
       over: null
     };
     this.cardDock?.clearSelected();
-    this.hud?.pushMessage('V13 loaded: modular repo build, organic map, roles, buildings and AI.');
+    this.hud?.pushMessage('V14 loaded: real map asset, navmesh deployment and fixed enemy AI.');
   }
 
   update(dt) {
+    this.state.elapsed += dt;
     if (!this.state.over) {
       this.state.matchTimer -= dt;
       if (this.state.matchTimer <= 0) {
@@ -99,7 +102,7 @@ export class Game {
     const deployed = this.deployment.deploy(this, cardId, x, y, team, options);
     if (deployed && team === TEAM.PLAYER) {
       const card = CARD_LIBRARY[cardId];
-      this.feed(`${card.shortName} deployed`);
+      this.feed(`${card.shortName} deployed on the navmesh`);
     }
     return deployed;
   }

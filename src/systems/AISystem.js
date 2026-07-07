@@ -14,16 +14,23 @@ export class AISystem {
       .filter(card => card.cost <= game.state.enemyEnergy);
 
     if (affordable.length === 0) {
-      game.state.aiTimer = 0.8;
+      game.state.aiTimer = 0.55;
       return;
     }
 
     const card = this.chooseCard(affordable, game, pressureLane);
     const lane = game.map.lanes[pressureLane];
-    const t = card.kind === 'building' ? 0.35 + Math.random() * 0.12 : 0.12 + Math.random() * 0.28;
+    // Lane progress is 0 = player base, 1 = enemy base. Enemy must deploy high on the map.
+    const t = card.kind === 'building'
+      ? 0.58 + Math.random() * 0.16
+      : 0.62 + Math.random() * 0.28;
     const p = pointOnPolyline(lane.points, t);
-    game.deploy(card.id, p.x + (Math.random() - 0.5) * 32, p.y + (Math.random() - 0.5) * 18, TEAM.ENEMY);
-    game.state.aiTimer = 1.2 + Math.random() * (game.state.suddenDeath ? 0.9 : 1.8);
+    const deployed = game.deploy(card.id, p.x + (Math.random() - 0.5) * 22, p.y + (Math.random() - 0.5) * 14, TEAM.ENEMY);
+    if (deployed) {
+      game.state.enemyPlays += 1;
+      if (game.state.enemyPlays <= 4 || Math.random() < 0.35) game.feed(`Enemy played ${card.shortName}`);
+    }
+    game.state.aiTimer = 0.85 + Math.random() * (game.state.suddenDeath ? 0.85 : 1.45);
   }
 
   pickPressureLane(game) {
@@ -32,8 +39,17 @@ export class AISystem {
       if (unit.team === TEAM.PLAYER && unit.alive) pressure[unit.laneIndex] += unit.card.cost || 1;
     }
     const max = Math.max(...pressure);
-    if (max > 0 && Math.random() < 0.7) return pressure.indexOf(max);
+    if (max > 0 && Math.random() < 0.72) return pressure.indexOf(max);
+    const damagedSide = this.mostDamagedEnemySide(game);
+    if (damagedSide !== null && Math.random() < 0.38) return damagedSide;
     return Math.floor(Math.random() * 3);
+  }
+
+  mostDamagedEnemySide(game) {
+    const sides = game.state.towers.filter(t => t.team === TEAM.ENEMY && t.kind === 'side' && t.alive);
+    if (!sides.length) return null;
+    sides.sort((a, b) => (a.hp / a.maxHp) - (b.hp / b.maxHp));
+    return sides[0].laneIndex;
   }
 
   chooseCard(cards, game, laneIndex) {

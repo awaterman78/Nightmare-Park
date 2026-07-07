@@ -9,6 +9,10 @@ export class RenderSystem {
     this.scale = 1;
     this.offX = 0;
     this.offY = 0;
+    this.mapImage = new Image();
+    this.mapImageLoaded = false;
+    this.mapImage.onload = () => { this.mapImageLoaded = true; };
+    this.mapImage.src = './assets/maps/nightmare_park_arena_v14_4k.jpg';
   }
 
   resize() {
@@ -90,17 +94,134 @@ export class RenderSystem {
     this.roundRect(ctx, field.x, field.y, field.width, field.height, 24);
     ctx.fillStyle = '#160e20';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,216,111,.16)';
+    ctx.strokeStyle = 'rgba(255,216,111,.22)';
     ctx.lineWidth = 2;
     ctx.stroke();
     ctx.clip();
 
-    this.drawGroundTexture(ctx);
-    this.drawDecor(ctx, game);
-    this.drawRiver(ctx, game.map.river);
-    this.drawBridges(ctx, game.map.bridgeBands);
-    this.drawPaths(ctx, game);
-    this.drawMist(ctx);
+    this.drawMapBackground(ctx, game);
+    this.drawAmbientMapLighting(ctx, game);
+    this.drawSubtleRouteHints(ctx, game);
+    this.drawLivingMist(ctx, game);
+    this.drawMapParticles(ctx, game);
+    ctx.restore();
+  }
+
+  drawMapBackground(ctx, game) {
+    const field = game.map.field;
+    if (this.mapImageLoaded) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(this.mapImage, field.x, field.y, field.width, field.height);
+      ctx.restore();
+    } else {
+      this.drawGroundTexture(ctx);
+      this.drawDecor(ctx, game);
+      this.drawRiver(ctx, game.map.river);
+      this.drawBridges(ctx, game.map.bridgeBands);
+      this.drawPaths(ctx, game);
+    }
+
+    // Darken edges so cards/HUD remain readable and the map feels deeper.
+    const edge = ctx.createRadialGradient(195, 368, 80, 195, 368, 350);
+    edge.addColorStop(0, 'rgba(0,0,0,0)');
+    edge.addColorStop(0.58, 'rgba(0,0,0,.04)');
+    edge.addColorStop(1, 'rgba(0,0,0,.34)');
+    ctx.fillStyle = edge;
+    ctx.fillRect(field.x, field.y, field.width, field.height);
+  }
+
+  drawAmbientMapLighting(ctx, game) {
+    const time = game.state?.elapsed || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const light of game.map.ambientLights || []) {
+      const pulse = 0.76 + Math.sin(time * 2.1 + light.phase) * 0.18;
+      const r = light.r * pulse;
+      const gradient = ctx.createRadialGradient(light.x, light.y, 1, light.x, light.y, r);
+      gradient.addColorStop(0, light.colour);
+      gradient.addColorStop(0.55, light.colour.replace(/\.\d+\)/, '.10)'));
+      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(light.x, light.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawSubtleRouteHints(ctx, game) {
+    ctx.save();
+    // The route logic is real, but deliberately subtle so the map stays organic.
+    for (const lane of game.map.lanes) {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(125,255,102,.055)';
+      ctx.lineWidth = lane.width || 34;
+      this.strokeSmoothPath(ctx, lane.points);
+      ctx.strokeStyle = 'rgba(255,216,111,.07)';
+      ctx.lineWidth = 4;
+      this.strokeSmoothPath(ctx, lane.points);
+    }
+    ctx.restore();
+  }
+
+  drawLivingMist(ctx, game) {
+    const time = game.state?.elapsed || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    // Cursed river breathe.
+    for (let i = 0; i < 8; i++) {
+      const alpha = 0.035 + (i % 3) * 0.012;
+      const y = 350 + i * 8 + Math.sin(time * 1.3 + i) * 4;
+      ctx.strokeStyle = `rgba(55,255,126,${alpha})`;
+      ctx.lineWidth = 8 + (i % 3) * 2;
+      ctx.beginPath();
+      ctx.moveTo(20, y);
+      ctx.bezierCurveTo(90, 321 + i * 8, 172, 398 - i * 3, 238, 355 + i * 7);
+      ctx.bezierCurveTo(291, 329 + i * 3, 329, 384 + i * 2, 372, y + 2);
+      ctx.stroke();
+    }
+
+    for (let i = 0; i < 10; i++) {
+      const x = 44 + i * 35 + Math.sin(time * 0.45 + i) * 12;
+      const y = 120 + ((i * 67) % 500) + Math.cos(time * 0.38 + i) * 9;
+      ctx.fillStyle = `rgba(136,239,255,${0.025 + (i % 4) * .008})`;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 54, 13, Math.sin(i + time * .2) * .45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawMapParticles(ctx, game) {
+    const time = game.state?.elapsed || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const particle of game.map.ambientParticles || []) {
+      const drift = (time * particle.speed * 26 + particle.phase * 19) % 36;
+      const x = particle.x + Math.sin(time * .7 + particle.phase) * 6;
+      const y = particle.y - drift;
+      ctx.fillStyle = particle.phase % 2 > 1 ? 'rgba(255,216,111,.18)' : 'rgba(125,255,102,.14)';
+      ctx.beginPath();
+      ctx.arc(x, y, particle.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Occasional tiny bat silhouettes near the top, giving the map life without affecting gameplay.
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'rgba(0,0,0,.38)';
+    for (let i = 0; i < 4; i++) {
+      const x = 80 + ((time * 18 + i * 76) % 250);
+      const y = 116 + Math.sin(time * 1.4 + i) * 16;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.quadraticCurveTo(x - 7, y - 5, x - 13, y + 1);
+      ctx.quadraticCurveTo(x - 4, y - 2, x, y + 3);
+      ctx.quadraticCurveTo(x + 4, y - 2, x + 13, y + 1);
+      ctx.quadraticCurveTo(x + 7, y - 5, x, y);
+      ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -284,9 +405,34 @@ export class RenderSystem {
   drawDeploymentOverlay(ctx, game) {
     if (!game.state.selectedCard && !game.state.draggingCard) return;
     ctx.save();
-    ctx.fillStyle = 'rgba(125,255,102,.055)';
+
+    // Show the player's legal half, then real walkable path centres and blocked terrain.
+    ctx.fillStyle = 'rgba(125,255,102,.06)';
     ctx.fillRect(FIELD.x, FIELD.mid + 6, FIELD.width, FIELD.bottom - FIELD.mid - 6);
-    ctx.strokeStyle = 'rgba(125,255,102,.22)';
+
+    for (const zone of game.map.blockedZones || []) {
+      if (zone.kind === 'hazard' || zone.kind === 'obstacle') {
+        ctx.fillStyle = zone.kind === 'hazard' ? 'rgba(255,80,216,.13)' : 'rgba(255,91,110,.10)';
+        ctx.strokeStyle = zone.kind === 'hazard' ? 'rgba(255,80,216,.28)' : 'rgba(255,91,110,.22)';
+        ctx.lineWidth = 1.5;
+        this.drawShape(ctx, zone);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
+    for (const lane of game.map.lanes) {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(125,255,102,.20)';
+      ctx.lineWidth = lane.deployWidth || 46;
+      this.strokeSmoothPath(ctx, lane.points.slice(0, 6));
+      ctx.strokeStyle = 'rgba(255,216,111,.62)';
+      ctx.lineWidth = 5;
+      this.strokeSmoothPath(ctx, lane.points.slice(0, 6));
+    }
+
+    ctx.strokeStyle = 'rgba(125,255,102,.42)';
     ctx.setLineDash([8, 9]);
     ctx.beginPath();
     ctx.moveTo(FIELD.x + 8, FIELD.mid + 6);
@@ -294,6 +440,24 @@ export class RenderSystem {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.restore();
+  }
+
+  drawShape(ctx, shape) {
+    ctx.beginPath();
+    if (shape.polygon) {
+      const first = shape.polygon[0];
+      ctx.moveTo(first.x, first.y);
+      for (const p of shape.polygon.slice(1)) ctx.lineTo(p.x, p.y);
+      ctx.closePath();
+      return;
+    }
+    if (shape.circle) {
+      ctx.arc(shape.circle.x, shape.circle.y, shape.circle.r, 0, Math.PI * 2);
+      return;
+    }
+    if (shape.rect) {
+      ctx.rect(shape.rect.x, shape.rect.y, shape.rect.w, shape.rect.h);
+    }
   }
 
   drawTower(ctx, tower) {
@@ -586,7 +750,7 @@ export class RenderSystem {
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#fff';
     ctx.font = '900 14px Inter, system-ui';
-    ctx.fillText('This is now a modular repo build, not a one-file mock.', VIEW.width / 2, 374);
+    ctx.fillText('V14 uses real map art plus navmesh-aware deployment.', VIEW.width / 2, 374);
     ctx.restore();
   }
 

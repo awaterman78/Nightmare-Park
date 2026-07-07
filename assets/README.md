@@ -1,10 +1,10 @@
 # Assets Folder
 
-This build still uses procedural canvas art, but the repo now has proper locations for future assets:
+V14 now uses a real map asset instead of a procedural placeholder.
 
-- `assets/maps` — finished map art, masks, path overlays
-- `assets/units` — sprite sheets, character concepts, animation frames
-- `assets/vfx` — projectile and hit effects
-- `assets/audio` — placeholder and final sound effects
+- `assets/maps/nightmare_park_arena_v14_4k.jpg` — 2160x3840 arena artwork used by the live canvas.
+- `assets/units` — future sprite sheets and animation frames.
+- `assets/vfx` — projectile and hit effects.
+- `assets/audio` — placeholder and final sound effects.
 
-The game currently runs without external assets so GitHub Pages cannot fail because of missing image paths.
+The map is not just decoration: `src/data/map.js` defines the matching walkable routes, blocked zones, bridge/choke areas and tower positions so units know where they can and cannot go.
