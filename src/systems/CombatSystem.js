@@ -17,16 +17,22 @@ export class CombatSystem {
   tickTimers(game, dt) {
     for (const unit of game.state.units) {
       unit.attackCd -= dt;
+      unit.animTime += dt;
+      unit.attackAnim = Math.max(0, unit.attackAnim - dt);
+      unit.spawnAnim = Math.max(0, unit.spawnAnim - dt);
+      unit.abilityPulse = Math.max(0, unit.abilityPulse - dt);
       unit.hitFlash = Math.max(0, unit.hitFlash - dt);
       if (unit.card.special === 'summoner') unit.specialCd -= dt;
     }
     for (const building of game.state.buildings) {
       building.attackCd -= dt;
       building.spawnCd -= dt;
+      building.attackPulse = Math.max(0, (building.attackPulse || 0) - dt);
       building.hitFlash = Math.max(0, building.hitFlash - dt);
     }
     for (const tower of game.state.towers) {
       tower.attackCd -= dt;
+      tower.attackPulse = Math.max(0, (tower.attackPulse || 0) - dt);
       tower.hitFlash = Math.max(0, tower.hitFlash - dt);
     }
     for (const effect of game.effects) effect.update(dt);
@@ -49,6 +55,7 @@ export class CombatSystem {
         const target = this.findTarget(game, building, building.card.range, { unitsOnly: true, canHitAir: true });
         if (target) {
           building.attackCd = building.card.attackEvery || 1;
+          building.attackPulse = 0.32;
           this.fireProjectile(game, building, target, building.card.damage, building.card.projectile || 'bolt', 0, 285);
         }
       }
@@ -62,6 +69,7 @@ export class CombatSystem {
 
       if (unit.card.special === 'summoner' && unit.specialCd <= 0) {
         unit.specialCd = unit.card.summonEvery || 5;
+        unit.abilityPulse = 0.72;
         const spawnProgress = unit.team === TEAM.PLAYER ? unit.progress - 0.01 : unit.progress + 0.01;
         game.deployment.summon(game, unit.card.summonId, unit.team, unit.laneIndex, spawnProgress, (Math.random() - 0.5) * 18);
         game.effects.push(new Effect({ x: unit.x, y: unit.y - 20, text: 'summon', colour: '#d58cff', life: 0.6, size: 10 }));
@@ -75,6 +83,8 @@ export class CombatSystem {
       if (target) {
         if (unit.attackCd <= 0) {
           unit.attackCd = unit.attackInterval();
+          unit.attackAnim = unit.card.attackType === 'melee' ? 0.22 : 0.38;
+          unit.abilityPulse = Math.max(unit.abilityPulse || 0, unit.card.attackType === 'projectile' ? 0.32 : 0.18);
           this.attack(game, unit, target);
         }
       } else {
@@ -90,8 +100,9 @@ export class CombatSystem {
       const target = this.findTarget(game, tower, tower.range, { unitsOnly: true, canHitAir: true });
       if (!target) continue;
       tower.attackCd = tower.attackEvery;
+      tower.attackPulse = 0.34;
       const damage = Math.round(tower.damage * (game.state.suddenDeath ? 1.25 : 1));
-      this.fireProjectile(game, tower, target, damage, tower.kind === 'core' ? 'corebolt' : 'bolt', 0, 310);
+      this.fireProjectile(game, tower, target, damage, tower.projectile || (tower.kind === 'core' ? 'gateBolt' : 'soulBolt'), 0, 320);
     }
   }
 
@@ -206,6 +217,10 @@ export class CombatSystem {
     if (style === 'stone') return '#9da9b8';
     if (style === 'hex') return '#d58cff';
     if (style === 'corebolt') return '#ffd86f';
+    if (style === 'soulBolt') return '#88efff';
+    if (style === 'bloodBolt') return '#ff5b6e';
+    if (style === 'gateBolt') return '#7dff66';
+    if (style === 'mausoleumBolt') return '#d58cff';
     return '#88efff';
   }
 
@@ -213,6 +228,8 @@ export class CombatSystem {
     if (style === 'pumpkin') return 190;
     if (style === 'stone') return 235;
     if (style === 'hex') return 250;
+    if (style === 'soulBolt' || style === 'gateBolt') return 330;
+    if (style === 'bloodBolt' || style === 'mausoleumBolt') return 320;
     return 290;
   }
 

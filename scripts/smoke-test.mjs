@@ -9,12 +9,13 @@ import { CardCycleSystem } from '../src/systems/CardCycleSystem.js';
 import { AISystem } from '../src/systems/AISystem.js';
 import { AtmosphereSystem } from '../src/systems/AtmosphereSystem.js';
 import { ATMOSPHERE } from '../src/data/atmosphere.js';
+import { DEFENSE_LIBRARY } from '../src/data/defenses.js';
 
-assert.equal(PLAYER_DECK.length, 8, 'V16 should retain the full 8-card player deck');
-assert.ok(ENEMY_DECK.length >= 7, 'V16 enemy needs its own deck');
+assert.equal(PLAYER_DECK.length, 8, 'V17 should retain the full 8-card player deck');
+assert.ok(ENEMY_DECK.length >= 7, 'V17 enemy needs its own deck');
 assert.equal(MAP.lanes.length, 3, 'The map should retain 3 logical path routes');
 assert.ok(MAP.lanes.every(lane => lane.points.length >= 10), 'Each route should be organic with enough waypoints');
-assert.ok(MAP.background.src.includes('nightmare_park_arena_v14_4k.jpg'), 'V16 should keep the embedded 4K arena asset');
+assert.ok(MAP.background.src.includes('nightmare_park_arena_v14_4k.jpg'), 'V17 should keep the embedded 4K arena asset');
 assert.ok(existsSync(new URL('../assets/maps/nightmare_park_arena_v14_4k.jpg', import.meta.url)), 'Map art asset must exist');
 assert.ok(statSync(new URL('../assets/maps/nightmare_park_arena_v14_4k.jpg', import.meta.url)).size > 1_000_000, 'Map art should not be tiny');
 assert.ok(MAP_IMAGE_DATA_URI.startsWith('data:image/jpeg;base64,'), 'Embedded map fallback should be available');
@@ -76,6 +77,11 @@ assert.ok(fakeGame.deployCalls > 0, 'Enemy AI should attempt to play a card');
 assert.ok(ATMOSPHERE.torchClusters.length >= 8, 'V16 should define multiple torch clusters');
 assert.ok(ATMOSPHERE.fogBands.length >= 5, 'V16 should define multiple animated fog bands');
 assert.ok(ATMOSPHERE.bats.length >= 3, 'V16 should include ambient bat paths');
+assert.ok(Object.keys(DEFENSE_LIBRARY).length >= 4, 'V17 should define customisable defence buildings');
+assert.ok(MAP.towers.every(tower => tower.defenseId), 'Every map tower should now reference a defence building skin');
+assert.ok(MAP.towers.some(tower => tower.defenseId === 'greenGateCore'), 'Player core should be a real defence building');
+assert.ok(MAP.towers.some(tower => tower.defenseId === 'crimsonMausoleumCore'), 'Enemy core should be a real defence building');
+
 const atmosphere = new AtmosphereSystem();
 const fakeAtmosphereGame = {
   state: { suddenDeath: false, units: [{}, {}], projectiles: [] },
@@ -86,4 +92,4 @@ atmosphere.update(fakeAtmosphereGame, 1.25);
 assert.ok(atmosphere.state.time > 1, 'Atmosphere time should advance');
 assert.ok(atmosphere.state.danger > 0, 'Atmosphere danger should react to match state');
 
-console.log('Nightmare Park V16 living arena/card-cycle/enemy-brain/navmesh smoke test passed.');
+console.log('Nightmare Park V17 defence-building/character-motion/enemy-brain/navmesh smoke test passed.');

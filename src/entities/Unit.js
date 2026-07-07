@@ -25,6 +25,13 @@ export class Unit {
     this.facing = team === TEAM.PLAYER ? 1 : -1;
     this.frenzied = false;
     this.navSegment = 0;
+    this.animTime = Math.random() * 2.5;
+    this.visualSeed = Math.random() * Math.PI * 2;
+    this.attackAnim = 0;
+    this.spawnAnim = 0.38;
+    this.abilityPulse = 0;
+    this.lastX = 0;
+    this.lastY = 0;
   }
 
   syncPosition(map) {
@@ -32,6 +39,8 @@ export class Unit {
     const sample = samplePolyline(lane.points, this.progress);
     const breathing = Math.sin((this.progress * 13 + this.offset * 0.08) * Math.PI) * 2.2;
     const sideOffset = this.offset + breathing;
+    this.lastX = this.x;
+    this.lastY = this.y;
     this.x = sample.point.x + sample.normal.x * sideOffset;
     this.y = sample.point.y + sample.normal.y * sideOffset + (this.card.flying ? -14 : 0);
     this.navSegment = sample.segmentIndex;

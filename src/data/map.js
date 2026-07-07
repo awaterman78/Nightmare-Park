@@ -118,12 +118,12 @@ export const MAP = Object.freeze({
     { id: 'enemy-statue', name: 'Enemy statue', kind: 'obstacle', circle: { x: 195, y: 257, r: 24 } }
   ],
   towers: [
-    { id: 'enemy-left', team: 'enemy', laneIndex: 0, x: 91, y: 195, hp: 390, kind: 'side' },
-    { id: 'enemy-core', team: 'enemy', laneIndex: 1, x: 195, y: 126, hp: 780, kind: 'core' },
-    { id: 'enemy-right', team: 'enemy', laneIndex: 2, x: 299, y: 195, hp: 390, kind: 'side' },
-    { id: 'player-left', team: 'player', laneIndex: 0, x: 96, y: 586, hp: 390, kind: 'side' },
-    { id: 'player-core', team: 'player', laneIndex: 1, x: 195, y: 641, hp: 780, kind: 'core' },
-    { id: 'player-right', team: 'player', laneIndex: 2, x: 294, y: 586, hp: 390, kind: 'side' }
+    { id: 'enemy-left', team: 'enemy', laneIndex: 0, x: 91, y: 195, kind: 'side', slot: 'left', defenseId: 'cursedSkullTurret' },
+    { id: 'enemy-core', team: 'enemy', laneIndex: 1, x: 195, y: 126, kind: 'core', slot: 'core', defenseId: 'crimsonMausoleumCore' },
+    { id: 'enemy-right', team: 'enemy', laneIndex: 2, x: 299, y: 195, kind: 'side', slot: 'right', defenseId: 'cursedSkullTurret' },
+    { id: 'player-left', team: 'player', laneIndex: 0, x: 96, y: 586, kind: 'side', slot: 'left', defenseId: 'soulLanternTurret' },
+    { id: 'player-core', team: 'player', laneIndex: 1, x: 195, y: 641, kind: 'core', slot: 'core', defenseId: 'greenGateCore' },
+    { id: 'player-right', team: 'player', laneIndex: 2, x: 294, y: 586, kind: 'side', slot: 'right', defenseId: 'soulLanternTurret' }
   ],
   ambientLights: [
     { x: 64, y: 318, r: 42, colour: 'rgba(151, 70, 255, .35)', phase: 0.1 },

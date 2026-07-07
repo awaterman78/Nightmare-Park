@@ -63,7 +63,7 @@ export class Game {
     this.cardDock?.setHand(this.state.playerHand);
     this.cardDock?.setNextCard(this.state.playerNextCard);
     this.cardDock?.clearSelected();
-    this.hud?.pushMessage('V16 loaded: living arena, enemy brain and real card cycling.');
+    this.hud?.pushMessage('V17 loaded: defence buildings, custom slots and upgraded monster motion.');
   }
 
   update(dt) {

@@ -1,4 +1,4 @@
-export const BUILD = 'V16 LIVING ARENA';
+export const BUILD = 'V17 DEFENCE BUILDINGS + CHARACTER MOTION';
 
 export const VIEW = Object.freeze({
   width: 390,
