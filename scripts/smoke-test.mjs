@@ -7,12 +7,14 @@ import { TEAM, GAME_RULES } from '../src/core/constants.js';
 import { NavigationSystem } from '../src/systems/NavigationSystem.js';
 import { CardCycleSystem } from '../src/systems/CardCycleSystem.js';
 import { AISystem } from '../src/systems/AISystem.js';
+import { AtmosphereSystem } from '../src/systems/AtmosphereSystem.js';
+import { ATMOSPHERE } from '../src/data/atmosphere.js';
 
-assert.equal(PLAYER_DECK.length, 8, 'V15 should retain the full 8-card player deck');
-assert.ok(ENEMY_DECK.length >= 7, 'V15 enemy needs its own deck');
+assert.equal(PLAYER_DECK.length, 8, 'V16 should retain the full 8-card player deck');
+assert.ok(ENEMY_DECK.length >= 7, 'V16 enemy needs its own deck');
 assert.equal(MAP.lanes.length, 3, 'The map should retain 3 logical path routes');
 assert.ok(MAP.lanes.every(lane => lane.points.length >= 10), 'Each route should be organic with enough waypoints');
-assert.ok(MAP.background.src.includes('nightmare_park_arena_v14_4k.jpg'), 'V15 should use the embedded 4K arena asset');
+assert.ok(MAP.background.src.includes('nightmare_park_arena_v14_4k.jpg'), 'V16 should keep the embedded 4K arena asset');
 assert.ok(existsSync(new URL('../assets/maps/nightmare_park_arena_v14_4k.jpg', import.meta.url)), 'Map art asset must exist');
 assert.ok(statSync(new URL('../assets/maps/nightmare_park_arena_v14_4k.jpg', import.meta.url)).size > 1_000_000, 'Map art should not be tiny');
 assert.ok(MAP_IMAGE_DATA_URI.startsWith('data:image/jpeg;base64,'), 'Embedded map fallback should be available');
@@ -71,4 +73,17 @@ const fakeGame = {
 ai.update(fakeGame, 2);
 assert.ok(fakeGame.deployCalls > 0, 'Enemy AI should attempt to play a card');
 
-console.log('Nightmare Park V15 enemy brain/card-cycle/navmesh smoke test passed.');
+assert.ok(ATMOSPHERE.torchClusters.length >= 8, 'V16 should define multiple torch clusters');
+assert.ok(ATMOSPHERE.fogBands.length >= 5, 'V16 should define multiple animated fog bands');
+assert.ok(ATMOSPHERE.bats.length >= 3, 'V16 should include ambient bat paths');
+const atmosphere = new AtmosphereSystem();
+const fakeAtmosphereGame = {
+  state: { suddenDeath: false, units: [{}, {}], projectiles: [] },
+  getCore(team) { return { hp: team === TEAM.PLAYER ? 500 : 780, maxHp: 780 }; },
+  feed() {}
+};
+atmosphere.update(fakeAtmosphereGame, 1.25);
+assert.ok(atmosphere.state.time > 1, 'Atmosphere time should advance');
+assert.ok(atmosphere.state.danger > 0, 'Atmosphere danger should react to match state');
+
+console.log('Nightmare Park V16 living arena/card-cycle/enemy-brain/navmesh smoke test passed.');

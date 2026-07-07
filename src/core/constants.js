@@ -1,4 +1,4 @@
-export const BUILD = 'V15 ENEMY BRAIN';
+export const BUILD = 'V16 LIVING ARENA';
 
 export const VIEW = Object.freeze({
   width: 390,

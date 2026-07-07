@@ -7,6 +7,7 @@ import { EconomySystem } from '../systems/EconomySystem.js';
 import { CombatSystem } from '../systems/CombatSystem.js';
 import { AISystem } from '../systems/AISystem.js';
 import { CardCycleSystem } from '../systems/CardCycleSystem.js';
+import { AtmosphereSystem } from '../systems/AtmosphereSystem.js';
 
 export class Game {
   constructor({ renderer, hud, cardDock }) {
@@ -18,6 +19,7 @@ export class Game {
     this.economy = new EconomySystem();
     this.combat = new CombatSystem();
     this.ai = new AISystem();
+    this.atmosphere = new AtmosphereSystem();
     this.playerCycle = null;
     this.enemyCycle = null;
     this.effects = [];
@@ -27,6 +29,7 @@ export class Game {
 
   reset() {
     this.effects = [];
+    this.atmosphere.reset();
     this.playerCycle = new CardCycleSystem(PLAYER_DECK, { shuffle: true });
     this.enemyCycle = new CardCycleSystem(ENEMY_DECK, { shuffle: true });
 
@@ -50,6 +53,7 @@ export class Game {
       enemyIntent: 'Opening pressure',
       enemyLane: 1,
       enemyMood: 'probing',
+      atmosphereMood: 'breathing',
       matchTimer: GAME_RULES.matchSeconds,
       suddenDeath: false,
       suddenDeathAnnounced: false,
@@ -59,11 +63,13 @@ export class Game {
     this.cardDock?.setHand(this.state.playerHand);
     this.cardDock?.setNextCard(this.state.playerNextCard);
     this.cardDock?.clearSelected();
-    this.hud?.pushMessage('V15 loaded: enemy brain, real 4-card hand and card cycling.');
+    this.hud?.pushMessage('V16 loaded: living arena, enemy brain and real card cycling.');
   }
 
   update(dt) {
     this.state.elapsed += dt;
+    this.atmosphere.update(this, dt);
+    this.state.atmosphereMood = this.atmosphere.state.lastMood;
     if (!this.state.over) {
       this.state.matchTimer -= dt;
       if (this.state.matchTimer <= 0) {

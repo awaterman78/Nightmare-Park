@@ -2,6 +2,7 @@ import { FIELD, TEAM, VIEW } from '../core/constants.js';
 import { clamp } from '../core/math.js';
 import { MAP_IMAGE_DATA_URI } from '../data/mapImage.js';
 import { CARD_LIBRARY } from '../data/cards.js';
+import { ATMOSPHERE } from '../data/atmosphere.js';
 
 export class RenderSystem {
   constructor(canvas) {
@@ -129,6 +130,7 @@ export class RenderSystem {
     this.drawSubtleRouteHints(ctx, game);
     this.drawLivingMist(ctx, game);
     this.drawMapParticles(ctx, game);
+    this.drawV16LivingArena(ctx, game);
     ctx.restore();
   }
 
@@ -267,6 +269,283 @@ export class RenderSystem {
       ctx.fill();
     }
     ctx.restore();
+  }
+
+
+  drawV16LivingArena(ctx, game) {
+    const atmosphere = game.atmosphere?.state || { time: game.state?.elapsed || 0, danger: 0, lightning: 0, fogSurge: 0.5, wind: 0 };
+    this.drawV16PuddleReflections(ctx, atmosphere);
+    this.drawV16CursedRiverPulse(ctx, atmosphere);
+    this.drawV16TorchFlicker(ctx, atmosphere);
+    this.drawV16Runes(ctx, atmosphere);
+    this.drawV16CarnivalSilhouettes(ctx, atmosphere);
+    this.drawV16FogBands(ctx, atmosphere);
+    this.drawV16Bats(ctx, atmosphere);
+    this.drawV16Embers(ctx, atmosphere);
+    this.drawV16DangerTint(ctx, atmosphere, game);
+    this.drawV16MoonFlash(ctx, atmosphere);
+  }
+
+  drawV16PuddleReflections(ctx, atmosphere) {
+    const time = atmosphere.time || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const puddle of ATMOSPHERE.puddles) {
+      const shimmer = 0.35 + Math.sin(time * 2.2 + puddle.phase) * 0.22;
+      const g = ctx.createRadialGradient(puddle.x, puddle.y, 1, puddle.x, puddle.y, puddle.w);
+      g.addColorStop(0, `rgba(136,239,255,${0.08 + shimmer * 0.07})`);
+      g.addColorStop(0.6, `rgba(125,255,102,${0.035 + shimmer * 0.04})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(puddle.x, puddle.y, puddle.w, puddle.h, Math.sin(puddle.phase) * .18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255,255,255,${0.025 + shimmer * .04})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(puddle.x + Math.sin(time + puddle.phase) * 2, puddle.y, puddle.w * .68, puddle.h * .42, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  drawV16CursedRiverPulse(ctx, atmosphere) {
+    const time = atmosphere.time || 0;
+    const danger = atmosphere.danger || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    for (let i = 0; i < 10; i++) {
+      const offset = Math.sin(time * 1.7 + i * 0.74) * (6 + danger * 8);
+      const alpha = 0.04 + i * 0.006 + danger * 0.035;
+      ctx.strokeStyle = `rgba(40,255,106,${alpha})`;
+      ctx.lineWidth = 3 + (i % 4) * 2;
+      ctx.beginPath();
+      ctx.moveTo(20, 354 + offset * .25 + i * 5);
+      ctx.bezierCurveTo(82, 323 + offset, 126, 395 - offset * .35, 187, 360 + i * 4);
+      ctx.bezierCurveTo(244, 324 - offset * .2, 300, 402 + offset * .35, 370, 360 + i * 5);
+      ctx.stroke();
+    }
+
+    // Ghostly face/energy pulse in the cursed central channel.
+    const pulse = 0.5 + Math.sin(time * 1.4) * 0.5;
+    const g = ctx.createRadialGradient(195, 371, 8, 195, 371, 80 + pulse * 18);
+    g.addColorStop(0, `rgba(125,255,102,${0.18 + danger * .14})`);
+    g.addColorStop(.45, `rgba(40,255,106,${0.06 + danger * .08})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(195, 371, 94 + pulse * 8, 34 + pulse * 5, 0.05, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawV16TorchFlicker(ctx, atmosphere) {
+    const time = atmosphere.time || 0;
+    const danger = atmosphere.danger || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const torch of ATMOSPHERE.torchClusters) {
+      const flicker = 0.72 + Math.sin(time * 6.1 + torch.phase) * 0.18 + Math.sin(time * 13.7 + torch.phase * 2) * 0.08;
+      const radius = torch.r * (0.88 + flicker * 0.28 + danger * .18);
+      const glow = ctx.createRadialGradient(torch.x, torch.y, 1, torch.x, torch.y, radius);
+      glow.addColorStop(0, this.withAlpha(torch.colour, 0.22 + danger * .07));
+      glow.addColorStop(0.34, this.withAlpha(torch.colour, 0.11 + danger * .05));
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(torch.x, torch.y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = this.withAlpha(torch.colour, 0.55 + danger * .2);
+      ctx.beginPath();
+      ctx.moveTo(torch.x, torch.y - 8 - flicker * 3);
+      ctx.quadraticCurveTo(torch.x - 5, torch.y, torch.x, torch.y + 8);
+      ctx.quadraticCurveTo(torch.x + 6, torch.y, torch.x, torch.y - 8 - flicker * 3);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawV16Runes(ctx, atmosphere) {
+    const time = atmosphere.time || 0;
+    const danger = atmosphere.danger || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const rune of ATMOSPHERE.runeStones) {
+      const pulse = 0.5 + Math.sin(time * 2.6 + rune.phase) * 0.5;
+      ctx.strokeStyle = this.withAlpha(rune.colour, 0.16 + pulse * .22 + danger * .12);
+      ctx.lineWidth = 1.5 + pulse * 1.5;
+      ctx.beginPath();
+      ctx.arc(rune.x, rune.y, rune.r + pulse * 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = this.withAlpha(rune.colour, 0.24 + pulse * .2);
+      ctx.beginPath();
+      ctx.moveTo(rune.x, rune.y - rune.r);
+      ctx.lineTo(rune.x + rune.r * .82, rune.y + rune.r * .5);
+      ctx.lineTo(rune.x - rune.r * .82, rune.y + rune.r * .5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawV16CarnivalSilhouettes(ctx, atmosphere) {
+    const time = atmosphere.time || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const item of ATMOSPHERE.carnivalSilhouettes) {
+      ctx.save();
+      ctx.translate(item.x, item.y);
+      ctx.rotate(Math.sin(time * 0.12 + item.phase) * 0.045);
+      ctx.globalAlpha = 0.12 + Math.sin(time * .7 + item.phase) * 0.035;
+      if (item.id === 'wheel') {
+        ctx.strokeStyle = '#88efff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, item.r, 0, Math.PI * 2);
+        ctx.stroke();
+        for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4 + time * 0.05;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(a) * item.r, Math.sin(a) * item.r);
+          ctx.stroke();
+        }
+      } else if (item.id === 'carousel') {
+        ctx.strokeStyle = '#ffd86f';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, item.r, item.r * .38, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-item.r * .75, 0);
+        ctx.lineTo(0, -item.r * .72);
+        ctx.lineTo(item.r * .75, 0);
+        ctx.stroke();
+      } else {
+        ctx.strokeStyle = '#d58cff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-item.r, item.r * .2);
+        ctx.bezierCurveTo(-item.r * .35, -item.r, item.r * .15, item.r, item.r, -item.r * .2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  drawV16FogBands(ctx, atmosphere) {
+    const time = atmosphere.time || 0;
+    const wind = atmosphere.wind || 0;
+    const surge = atmosphere.fogSurge || 0.5;
+    const danger = atmosphere.danger || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (const fog of ATMOSPHERE.fogBands) {
+      const drift = ((time * fog.speed + wind * 30 + fog.phase * 40) % 90) - 45;
+      const alpha = fog.alpha * (0.72 + surge * 0.7 + danger * 0.55);
+      ctx.fillStyle = `${fog.colour}${alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(fog.x + fog.w / 2 + drift, fog.y + Math.sin(time * .4 + fog.phase) * 7, fog.w / 2, fog.h, Math.sin(fog.phase) * .18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(fog.x + fog.w / 2 - 85 + drift * .7, fog.y + 9, fog.w * .32, fog.h * .7, -.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawV16Bats(ctx, atmosphere) {
+    const time = atmosphere.time || 0;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.52)';
+    for (const bat of ATMOSPHERE.bats) {
+      const width = FIELD.width + 80;
+      let x = FIELD.x - 40 + ((bat.phase + time * bat.speed) % width);
+      if (bat.speed < 0) x = FIELD.x + FIELD.width + 40 - ((bat.phase + time * Math.abs(bat.speed)) % width);
+      const y = bat.y + Math.sin(time * 2.2 + bat.phase) * 10;
+      const flap = Math.sin(time * 12 + bat.phase) * 4;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(bat.scale, bat.scale);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(-9, -5 - flap, -17, 2);
+      ctx.quadraticCurveTo(-6, 0, 0, 5);
+      ctx.quadraticCurveTo(6, 0, 17, 2);
+      ctx.quadraticCurveTo(9, -5 - flap, 0, 0);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  drawV16Embers(ctx, atmosphere) {
+    const time = atmosphere.time || 0;
+    const wind = atmosphere.wind || 0;
+    const danger = atmosphere.danger || 0;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const ember of ATMOSPHERE.embers) {
+      const travel = (time * ember.speed + ember.phase * 13) % 92;
+      const x = ember.x + wind * 18 + Math.sin(time * .8 + ember.phase) * 5;
+      const y = ember.y - travel;
+      const alpha = ember.type === 'spark' ? 0.12 + danger * .16 : 0.045 + danger * .04;
+      ctx.fillStyle = ember.type === 'spark' ? `rgba(255,216,111,${alpha})` : `rgba(190,210,220,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(x, y < FIELD.y ? y + FIELD.height : y, ember.size * (1 + danger * .5), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  drawV16DangerTint(ctx, atmosphere, game) {
+    const danger = atmosphere.danger || 0;
+    if (danger <= 0.04) return;
+    ctx.save();
+    const field = game.map.field;
+    const g = ctx.createRadialGradient(195, 368, 60, 195, 368, 330);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(.72, `rgba(255,80,216,${danger * .025})`);
+    g.addColorStop(1, `rgba(255,91,110,${danger * .11})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(field.x, field.y, field.width, field.height);
+    if (game.state?.suddenDeath) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = `rgba(255,216,111,${0.10 + danger * .18})`;
+      ctx.lineWidth = 2;
+      this.roundRect(ctx, field.x + 3, field.y + 3, field.width - 6, field.height - 6, 22);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  drawV16MoonFlash(ctx, atmosphere) {
+    const lightning = atmosphere.lightning || 0;
+    if (lightning <= 0.01) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = `rgba(190,220,255,${lightning * 0.34})`;
+    ctx.fillRect(FIELD.x, FIELD.y, FIELD.width, FIELD.height);
+    ctx.strokeStyle = `rgba(255,255,255,${lightning * .55})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(330, 76);
+    ctx.lineTo(306, 126);
+    ctx.lineTo(318, 124);
+    ctx.lineTo(292, 184);
+    ctx.lineTo(305, 178);
+    ctx.lineTo(286, 232);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  withAlpha(rgba, alpha) {
+    const match = /rgba\(([^,]+),([^,]+),([^,]+),[^)]+\)/.exec(rgba);
+    if (!match) return rgba;
+    return `rgba(${match[1]},${match[2]},${match[3]},${alpha})`;
   }
 
   drawGroundTexture(ctx) {
@@ -851,7 +1130,7 @@ export class RenderSystem {
     ctx.fillText(game.state.over === 'victory' ? 'Bones earned. Enemy brain beaten.' : 'Enemy brain controlled the park.', VIEW.width / 2, 374);
     ctx.font = '800 11px Inter, system-ui';
     ctx.fillStyle = 'rgba(255,255,255,.72)';
-    ctx.fillText('V15: real card cycling, enemy AI, match flow and combat feedback.', VIEW.width / 2, 398);
+    ctx.fillText('V16: living arena atmosphere, enemy AI and real card cycling.', VIEW.width / 2, 398);
     ctx.restore();
   }
 
