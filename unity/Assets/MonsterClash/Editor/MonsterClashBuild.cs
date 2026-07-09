@@ -21,6 +21,13 @@ namespace MonsterClash.Editor
             Debug.Log("Monster Clash Arena One is ready for play mode or cloud build.");
         }
 
+        // Unity Build Automation calls this after script compilation and before export.
+        public static void PreExport()
+        {
+            EnsureBuildScene();
+            Debug.Log("Monster Clash cloud pre export completed.");
+        }
+
         [MenuItem("Monster Clash/Build WebGL")]
         public static void BuildWebGL()
         {

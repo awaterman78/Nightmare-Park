@@ -24,6 +24,8 @@ The scene deliberately remains almost empty. `MonsterClashBootstrap` constructs 
 
 Use `Monster Clash > Build WebGL`, or run the GitHub Actions Unity WebGL workflow. The build output is written to `builds/MonsterClashWebGL` at repository root.
 
+For Unity Build Automation, set the project subfolder to `unity` and the pre export method to `MonsterClash.Editor.MonsterClashBuild.PreExport`.
+
 ## Art boundary
 
 The procedural characters prove gameplay and scale only. Replace each `MonsterCard.ModelPrefab` with the final rigged model. Game logic does not need to change when production art arrives.

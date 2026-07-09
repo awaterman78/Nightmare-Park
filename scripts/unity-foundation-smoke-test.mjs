@@ -77,4 +77,7 @@ assert.ok(director.includes('RunEnemyTurn'), 'Battle director should include an 
 const workflow = readFileSync(new URL('../.github/workflows/unity-webgl-diagnostic-build.yml', import.meta.url), 'utf8');
 assert.ok(workflow.includes('MonsterClash.Editor.MonsterClashBuild.BuildWebGL'), 'Cloud build must invoke the production build entry point');
 
+const buildEntryPoint = readFileSync(new URL('Editor/MonsterClashBuild.cs', sourceRoot), 'utf8');
+assert.ok(buildEntryPoint.includes('public static void PreExport()'), 'Unity Build Automation needs a public pre export hook');
+
 console.log(`Monster Clash Unity foundation smoke test passed across ${csharpFiles.length} C# files.`);
