@@ -1,7 +1,11 @@
-name: Unity WebGL Diagnostic Build
+name: Monster Clash Unity WebGL Build
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'unity/**'
+      - '.github/workflows/unity-webgl-diagnostic-build.yml'
 
 permissions:
   contents: read
@@ -59,7 +63,7 @@ jobs:
           restore-keys: |
             Library-WebGL-
 
-      - name: Build WebGL with GameCI
+      - name: Build Monster Clash WebGL with GameCI
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -69,15 +73,15 @@ jobs:
           projectPath: unity
           targetPlatform: WebGL
           buildsPath: builds
-          buildName: NightmareParkWebGL
+          buildName: MonsterClashWebGL
           unityVersion: 6000.0.0f1
           allowDirtyBuild: true
-          customParameters: -executeMethod NightmarePark.Editor.NightmareParkCloudBuildBootstrap.PerformWebGLBuild
+          customParameters: -executeMethod MonsterClash.Editor.MonsterClashBuild.BuildWebGL
 
       - name: Upload WebGL build artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: NightmarePark-WebGL-build-output
+          name: Monster-Clash-WebGL
           path: builds
           if-no-files-found: warn
