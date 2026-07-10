@@ -5,11 +5,13 @@ namespace MonsterClash
 {
     public sealed class DirectWebInput : MonoBehaviour
     {
-        public const string BuildLabel = "DIRECT TAP 1";
+        public const string BuildLabel = "BUILD 13 · DIRECT TAP";
 
-        private const float CardZoneMaximumY = 0.34f;
-        private const float ArenaMinimumY = 0.34f;
-        private const float ArenaMaximumY = 0.86f;
+        private const float PortraitDockTop = 0.235f;
+        private const float PortraitTopBottom = 0.89f;
+        private const float WideDockTop = 0.30f;
+        private const float WideTopBottom = 0.84f;
+        private const float CardHeightWithinDock = 0.75f;
 
         private BattleDirector director;
         private bool announced;
@@ -57,14 +59,30 @@ namespace MonsterClash
 
             if (director.Phase != BattlePhase.Playing) return;
 
-            if (normalisedY <= CardZoneMaximumY)
+            Rect safeArea = Screen.safeArea;
+            float pixelX = normalisedX * Mathf.Max(1f, Screen.width);
+            float pixelY = normalisedY * Mathf.Max(1f, Screen.height);
+            float safeX = Mathf.InverseLerp(safeArea.xMin, safeArea.xMax, pixelX);
+            float safeY = Mathf.InverseLerp(safeArea.yMin, safeArea.yMax, pixelY);
+
+            bool wideLayout = safeArea.width / Mathf.Max(1f, safeArea.height) > 0.85f;
+            float dockTop = wideLayout ? WideDockTop : PortraitDockTop;
+            float arenaTop = wideLayout ? WideTopBottom : PortraitTopBottom;
+            float cardZoneTop = dockTop * CardHeightWithinDock;
+
+            if (safeY <= cardZoneTop)
             {
                 int handIndex = Mathf.Clamp(
-                    Mathf.FloorToInt(normalisedX * BattleBalance.HandSize),
+                    Mathf.FloorToInt(safeX * BattleBalance.HandSize),
                     0,
                     BattleBalance.HandSize - 1);
 
                 director.SelectPlayerCard(handIndex);
+                return;
+            }
+
+            if (safeY < dockTop || safeY > arenaTop)
+            {
                 return;
             }
 
@@ -77,9 +95,9 @@ namespace MonsterClash
             float arenaX = Mathf.Lerp(
                 -BattleBalance.ArenaHalfWidth + 0.45f,
                 BattleBalance.ArenaHalfWidth - 0.45f,
-                normalisedX);
+                safeX);
 
-            float depth = Mathf.InverseLerp(ArenaMinimumY, ArenaMaximumY, normalisedY);
+            float depth = Mathf.InverseLerp(dockTop, arenaTop, safeY);
             float arenaZ = Mathf.Lerp(
                 -BattleBalance.ArenaHalfLength + 0.5f,
                 -BattleBalance.DeploymentRiverMargin,
