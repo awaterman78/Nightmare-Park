@@ -89,7 +89,6 @@ namespace MonsterClash
         [UnityEngine.Scripting.Preserve]
         public void OnWebPointerDown(string payload)
         {
-            if (compiledWebInputActive) return;
             if (!TryParseWebPoint(payload, out Vector2 point)) return;
             webPointerDown = point;
             hasWebPointerDown = true;
@@ -98,7 +97,6 @@ namespace MonsterClash
         [UnityEngine.Scripting.Preserve]
         public void OnWebPointerUp(string payload)
         {
-            if (compiledWebInputActive) return;
             if (!TryParseWebPoint(payload, out Vector2 point)) return;
             webPointerUp = point;
             hasWebPointerUp = true;
@@ -150,17 +148,14 @@ namespace MonsterClash
 #if UNITY_WEBGL && !UNITY_EDITOR
             if (compiledWebInputActive)
             {
-                if (MonsterClashInput_HasPointerDown() == 0)
+                if (MonsterClashInput_HasPointerDown() != 0)
                 {
-                    screenPoint = default;
-                    return false;
+                    screenPoint = new Vector2(
+                        MonsterClashInput_GetPointerDownX(),
+                        MonsterClashInput_GetPointerDownY());
+                    MonsterClashInput_ConsumePointerDown();
+                    return AcceptPointer(screenPoint, false);
                 }
-
-                screenPoint = new Vector2(
-                    MonsterClashInput_GetPointerDownX(),
-                    MonsterClashInput_GetPointerDownY());
-                MonsterClashInput_ConsumePointerDown();
-                return AcceptPointer(screenPoint, false);
             }
 #endif
 
@@ -193,17 +188,14 @@ namespace MonsterClash
 #if UNITY_WEBGL && !UNITY_EDITOR
             if (compiledWebInputActive)
             {
-                if (MonsterClashInput_HasPointerUp() == 0)
+                if (MonsterClashInput_HasPointerUp() != 0)
                 {
-                    screenPoint = default;
-                    return false;
+                    screenPoint = new Vector2(
+                        MonsterClashInput_GetPointerUpX(),
+                        MonsterClashInput_GetPointerUpY());
+                    MonsterClashInput_ConsumePointerUp();
+                    return AcceptPointer(screenPoint, true);
                 }
-
-                screenPoint = new Vector2(
-                    MonsterClashInput_GetPointerUpX(),
-                    MonsterClashInput_GetPointerUpY());
-                MonsterClashInput_ConsumePointerUp();
-                return AcceptPointer(screenPoint, true);
             }
 #endif
 

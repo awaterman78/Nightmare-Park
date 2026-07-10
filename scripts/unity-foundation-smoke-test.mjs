@@ -89,6 +89,8 @@ assert.ok(input.includes('OnWebPointerDown'), 'Web builds need a direct browser 
 assert.ok(input.includes('MonsterClashInput_Install'), 'Web builds need a compiled browser pointer bridge');
 assert.ok(input.includes('OnWebPointerUp'), 'Web builds need pointer release input for card dragging');
 assert.ok(input.includes('hud.TryGetHandIndex'), 'Card selection should not depend on immediate mode GUI touch handling');
+assert.ok(!input.includes('if (compiledWebInputActive) return;'), 'The page pointer bridge must remain available when the compiled bridge installs');
+assert.ok(input.includes('if (MonsterClashInput_HasPointerDown() != 0)'), 'A quiet compiled bridge must fall through to page and native input');
 
 const webInputPlugin = readFileSync(new URL('../Plugins/WebGL/MonsterClashInput.jslib', sourceRoot), 'utf8');
 assert.ok(webInputPlugin.includes('MonsterClashInput_HasPointerDown'), 'Web input plug-in should expose pointer press state');
@@ -104,5 +106,7 @@ assert.ok(mobileTemplate.includes('touch-action: none'), 'Mobile template should
 assert.ok(mobileTemplate.includes('devicePixelRatio: isMobile ? 1'), 'Mobile template should avoid an oversized Retina framebuffer');
 assert.ok(mobileTemplate.includes('OnWebPointerDown'), 'Mobile template should forward pointer input into Unity');
 assert.ok(mobileTemplate.includes('OnWebPointerUp'), 'Mobile template should forward drag release input into Unity');
+assert.ok(mobileTemplate.includes('window.__monsterClashInputState'), 'Mobile template should record input before Unity listeners can intercept it');
+assert.ok(mobileTemplate.includes('recordPointer(event.clientX, event.clientY'), 'Pointer events should feed the compiled input state directly');
 
 console.log(`Monster Clash Unity foundation smoke test passed across ${csharpFiles.length} C# files.`);
