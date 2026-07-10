@@ -60,15 +60,15 @@
 
     #input-version {
       position: absolute;
-      top: calc(env(safe-area-inset-top, 0px) + 6px);
-      right: calc(env(safe-area-inset-right, 0px) + 6px);
+      top: calc(env(safe-area-inset-top, 0px) + 5px);
+      right: calc(env(safe-area-inset-right, 0px) + 5px);
       z-index: 4;
-      padding: 4px 7px;
-      border: 1px solid rgba(167, 255, 207, 0.7);
-      border-radius: 6px;
+      padding: 3px 6px;
+      border: 1px solid rgba(167, 255, 207, 0.52);
+      border-radius: 5px;
       color: #a7ffcf;
-      background: rgba(3, 2, 8, 0.76);
-      font: 700 10px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: rgba(3, 2, 8, 0.72);
+      font: 700 9px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       letter-spacing: 0.06em;
       pointer-events: none;
     }
@@ -119,9 +119,9 @@
 <body>
   <main id="unity-container">
     <canvas id="unity-canvas" tabindex="0" aria-label="Monster Clash game"></canvas>
-    <div id="input-version">DIRECT TAP 1</div>
+    <div id="input-version">B13 · DIRECT</div>
     <section id="unity-loading" aria-live="polite">
-      <div id="unity-loading-label">OPENING MONSTER CLASH · DIRECT TAP 1</div>
+      <div id="unity-loading-label">OPENING MONSTER CLASH · BUILD 13</div>
       <div id="unity-progress-track" aria-hidden="true">
         <div id="unity-progress-bar"></div>
       </div>
