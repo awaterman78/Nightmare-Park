@@ -181,6 +181,13 @@ namespace MonsterClash
         {
             if (!draggingFromCard)
             {
+                if (director.Phase == BattlePhase.Playing
+                    && director.SelectedHandIndex >= 0
+                    && !hud.IsPointOverInterface(screenPoint))
+                {
+                    TryDeployAt(screenPoint);
+                }
+
                 ResetPointerState();
                 return;
             }
