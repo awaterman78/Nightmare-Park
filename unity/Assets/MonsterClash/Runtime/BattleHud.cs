@@ -377,7 +377,16 @@ namespace MonsterClash
 
         private static void EnsureEventSystem()
         {
-            if (FindFirstObjectByType<EventSystem>() != null) return;
+            EventSystem existing = FindFirstObjectByType<EventSystem>();
+            if (existing != null)
+            {
+                if (existing.GetComponent<BaseInputModule>() == null)
+                {
+                    existing.gameObject.AddComponent<StandaloneInputModule>();
+                }
+
+                return;
+            }
 
             GameObject eventSystemObject = new GameObject(
                 "EventSystem",
@@ -473,52 +482,6 @@ namespace MonsterClash
 
             public Image Image { get; }
             public Text Text { get; }
-        }
-    }
-
-    internal sealed class ArenaPointerSurface : MonoBehaviour, IPointerClickHandler
-    {
-        private BattleHud hud;
-
-        public void Initialise(BattleHud battleHud)
-        {
-            hud = battleHud;
-        }
-
-        public void OnPointerClick(PointerEventData eventData)
-        {
-            hud?.OnArenaClicked(eventData.position);
-        }
-    }
-
-    internal sealed class CardPointerHandler : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
-    {
-        private BattleHud hud;
-        private int handIndex;
-
-        public void Initialise(BattleHud battleHud, int index)
-        {
-            hud = battleHud;
-            handIndex = index;
-        }
-
-        public void OnPointerClick(PointerEventData eventData)
-        {
-            hud?.OnCardClicked(handIndex);
-        }
-
-        public void OnBeginDrag(PointerEventData eventData)
-        {
-            hud?.OnCardDragStarted(handIndex);
-        }
-
-        public void OnDrag(PointerEventData eventData)
-        {
-        }
-
-        public void OnEndDrag(PointerEventData eventData)
-        {
-            hud?.OnCardDragEnded(eventData.position);
         }
     }
 }
