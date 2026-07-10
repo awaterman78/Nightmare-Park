@@ -85,25 +85,26 @@ assert.ok(buildEntryPoint.includes('GraphicsDeviceType.OpenGLES3'), 'iPhone buil
 assert.ok(buildEntryPoint.includes('PlayerSettings.WebGL.wasm2023 = false'), 'Web builds should retain Safari 15 compatibility');
 
 const input = readFileSync(new URL('Runtime/BattleInputController.cs', sourceRoot), 'utf8');
-assert.ok(input.includes('OnWebPointerDown'), 'Web builds need a direct browser pointer bridge');
-assert.ok(input.includes('OnWebPointerUp'), 'Web builds need pointer release input for card dragging');
-assert.ok(input.includes('hud.TryGetHandIndex'), 'Card selection should not depend on immediate mode GUI touch handling');
-assert.ok(input.includes('ObserveGuiPointer'), 'Touch builds need a Unity-side fallback based on the pointer position used for HUD hover');
-assert.ok(input.includes('TryHandleGuiPointerFallback'), 'Touch builds should turn a changed HUD pointer position into gameplay input');
-assert.ok(input.includes('Input.touchSupported'), 'The hover fallback must stay limited to touch-capable devices');
+assert.ok(input.includes('OnWebPointerEvent'), 'Web builds need one direct browser pointer entry point');
+assert.ok(input.includes('webPointerEvents'), 'Browser pointer events should be queued and processed in order');
+assert.ok(input.includes('WebPointerPhase.Down'), 'Input should process pointer presses');
+assert.ok(input.includes('WebPointerPhase.Move'), 'Input should process pointer movement');
+assert.ok(input.includes('WebPointerPhase.Up'), 'Input should process pointer releases');
+assert.ok(input.includes('WebPointerPhase.Cancel'), 'Input should recover from cancelled touches');
+assert.ok(input.includes('hud.TryGetHandIndex'), 'Card selection should use deterministic HUD hit testing');
+assert.ok(!input.includes('TryHandleGuiPointerFallback'), 'Mobile input must not replay GUI hover as a second touch route');
 assert.ok(!input.includes('DllImport'), 'Mobile input must not depend on a WebGL plug-in entry point');
 
 const hud = readFileSync(new URL('Runtime/BattleHud.cs', sourceRoot), 'utf8');
 assert.ok(hud.includes('public bool TryGetHandIndex'), 'HUD should expose deterministic mobile card hit testing');
-assert.ok(hud.includes('Event.current.type == EventType.Repaint'), 'HUD should sample the stable pointer position used to render card hover');
-assert.ok(hud.includes('inputController?.ObserveGuiPointer(Event.current.mousePosition)'), 'HUD should expose the exact pointer position that drives card hover');
-assert.ok(bootstrap.includes('hud.AttachInput(input)'), 'Runtime bootstrap should connect HUD hover observations to battle input');
 
 const mobileTemplate = readFileSync(new URL('../WebGLTemplates/MonsterClashMobile/index.html', sourceRoot), 'utf8');
 assert.ok(mobileTemplate.includes('viewport-fit=cover'), 'Mobile template should support iPhone safe areas');
 assert.ok(mobileTemplate.includes('touch-action: none'), 'Mobile template should prevent browser gestures from stealing game input');
 assert.ok(mobileTemplate.includes('devicePixelRatio: isMobile ? 1'), 'Mobile template should avoid an oversized Retina framebuffer');
-assert.ok(mobileTemplate.includes('OnWebPointerDown'), 'Mobile template should forward pointer input into Unity');
-assert.ok(mobileTemplate.includes('OnWebPointerUp'), 'Mobile template should forward drag release input into Unity');
+assert.ok(mobileTemplate.includes('OnWebPointerEvent'), 'Mobile template should use the single pointer event entry point');
+assert.ok(mobileTemplate.includes('pointermove'), 'Mobile template should forward drag movement');
+assert.ok(mobileTemplate.includes('pointercancel'), 'Mobile template should recover from interrupted touches');
+assert.ok(mobileTemplate.includes('toNormalisedUnityPoint'), 'Pointer positions should be normalised against the visible canvas');
 
 console.log(`Monster Clash Unity foundation smoke test passed across ${csharpFiles.length} C# files.`);
