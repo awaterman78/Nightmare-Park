@@ -155,30 +155,6 @@
       return Math.round(x) + "," + Math.round(y);
     }
 
-    function recordPointer(clientX, clientY, released) {
-      const point = toUnityPoint(clientX, clientY).split(",");
-      const state = window.__monsterClashInputState || {
-        installed: false,
-        down: false,
-        up: false,
-        downX: 0,
-        downY: 0,
-        upX: 0,
-        upY: 0
-      };
-
-      window.__monsterClashInputState = state;
-      if (released) {
-        state.upX = Number(point[0]);
-        state.upY = Number(point[1]);
-        state.up = true;
-      } else {
-        state.downX = Number(point[0]);
-        state.downY = Number(point[1]);
-        state.down = true;
-      }
-    }
-
     function forwardPointer(event, methodName) {
       if (event.isPrimary === false || event.button > 0) return;
       event.preventDefault();
@@ -191,7 +167,6 @@
         } catch (error) {
         }
       }
-      recordPointer(event.clientX, event.clientY, released);
       if (!unityInstance) return;
 
       unityInstance.SendMessage(
@@ -209,7 +184,6 @@
         if (event.touches.length === 0) return;
         event.preventDefault();
         const touch = event.touches[0];
-        recordPointer(touch.clientX, touch.clientY, false);
         if (!unityInstance) return;
         unityInstance.SendMessage(
           "Battle Director",
@@ -222,7 +196,6 @@
         if (event.changedTouches.length === 0) return;
         event.preventDefault();
         const touch = event.changedTouches[0];
-        recordPointer(touch.clientX, touch.clientY, true);
         if (!unityInstance) return;
         unityInstance.SendMessage(
           "Battle Director",

@@ -6,6 +6,7 @@ namespace MonsterClash
     public sealed class BattleHud : MonoBehaviour
     {
         private BattleDirector director;
+        private BattleInputController inputController;
         private GUIStyle titleStyle;
         private GUIStyle hudStyle;
         private GUIStyle smallStyle;
@@ -22,10 +23,19 @@ namespace MonsterClash
             director = battleDirector;
         }
 
+        public void AttachInput(BattleInputController battleInputController)
+        {
+            inputController = battleInputController;
+        }
+
         private void OnGUI()
         {
             if (director == null) return;
             EnsureStyles();
+            if (Event.current.type == EventType.Repaint)
+            {
+                inputController?.ObserveGuiPointer(Event.current.mousePosition);
+            }
 
             float width = Screen.width;
             float height = Screen.height;

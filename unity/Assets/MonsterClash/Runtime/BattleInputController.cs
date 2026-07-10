@@ -1,66 +1,39 @@
 using System.Globalization;
-using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace MonsterClash
 {
     public sealed class BattleInputController : MonoBehaviour
     {
-#if UNITY_WEBGL && !UNITY_EDITOR
-        [DllImport("__Internal")]
-        private static extern int MonsterClashInput_Install();
-
-        [DllImport("__Internal")]
-        private static extern int MonsterClashInput_HasPointerDown();
-
-        [DllImport("__Internal")]
-        private static extern float MonsterClashInput_GetPointerDownX();
-
-        [DllImport("__Internal")]
-        private static extern float MonsterClashInput_GetPointerDownY();
-
-        [DllImport("__Internal")]
-        private static extern void MonsterClashInput_ConsumePointerDown();
-
-        [DllImport("__Internal")]
-        private static extern int MonsterClashInput_HasPointerUp();
-
-        [DllImport("__Internal")]
-        private static extern float MonsterClashInput_GetPointerUpX();
-
-        [DllImport("__Internal")]
-        private static extern float MonsterClashInput_GetPointerUpY();
-
-        [DllImport("__Internal")]
-        private static extern void MonsterClashInput_ConsumePointerUp();
-#endif
-
         private BattleDirector director;
         private Camera battleCamera;
         private BattleHud hud;
         private bool hasWebPointerDown;
         private bool hasWebPointerUp;
-        private bool compiledWebInputActive;
         private bool draggingFromCard;
+        private bool hasGuiPointer;
+        private bool hasGuiPointerCandidate;
+        private bool directPointerHeld;
+        private bool guiCardLatched;
+        private int guiLatchedCardIndex = -1;
         private Vector2 webPointerDown;
         private Vector2 webPointerUp;
+        private Vector2 lastGuiPointer;
+        private Vector2 guiPointerCandidate;
         private float lastDownTime = -10f;
         private float lastUpTime = -10f;
+        private float lastDirectPointerTime = -10f;
         private Vector2 lastDownPosition;
         private Vector2 lastUpPosition;
+
+        private const float GuiPointerMoveThresholdSquared = 16f;
+        private const float DirectPointerGraceSeconds = 0.25f;
 
         public void Initialise(BattleDirector battleDirector, Camera cameraToUse, BattleHud battleHud)
         {
             director = battleDirector;
             battleCamera = cameraToUse;
             hud = battleHud;
-        }
-
-        private void Start()
-        {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            compiledWebInputActive = MonsterClashInput_Install() != 0;
-#endif
         }
 
         private void Update()
@@ -76,14 +49,47 @@ namespace MonsterClash
 
             if (TryGetPrimaryDown(out Vector2 downPoint))
             {
+                directPointerHeld = true;
+                lastDirectPointerTime = Time.realtimeSinceStartup;
+                hasGuiPointerCandidate = false;
                 HandlePointerDown(downPoint);
                 return;
             }
 
             if (TryGetPrimaryUp(out Vector2 upPoint))
             {
-                HandlePointerUp(upPoint);
+                if (directPointerHeld)
+                {
+                    directPointerHeld = false;
+                    lastDirectPointerTime = Time.realtimeSinceStartup;
+                    hasGuiPointerCandidate = false;
+                    HandlePointerUp(upPoint);
+                    return;
+                }
             }
+
+            TryHandleGuiPointerFallback();
+        }
+
+        public void ObserveGuiPointer(Vector2 guiPoint)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (!Input.touchSupported || Screen.height <= Screen.width) return;
+
+            Vector2 screenPoint = new Vector2(guiPoint.x, Screen.height - guiPoint.y);
+            if (!hasGuiPointer)
+            {
+                hasGuiPointer = true;
+                lastGuiPointer = screenPoint;
+                return;
+            }
+
+            if (Vector2.SqrMagnitude(screenPoint - lastGuiPointer) < GuiPointerMoveThresholdSquared) return;
+
+            lastGuiPointer = screenPoint;
+            guiPointerCandidate = screenPoint;
+            hasGuiPointerCandidate = true;
+#endif
         }
 
         [UnityEngine.Scripting.Preserve]
@@ -145,20 +151,6 @@ namespace MonsterClash
 
         private bool TryGetPrimaryDown(out Vector2 screenPoint)
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            if (compiledWebInputActive)
-            {
-                if (MonsterClashInput_HasPointerDown() != 0)
-                {
-                    screenPoint = new Vector2(
-                        MonsterClashInput_GetPointerDownX(),
-                        MonsterClashInput_GetPointerDownY());
-                    MonsterClashInput_ConsumePointerDown();
-                    return AcceptPointer(screenPoint, false);
-                }
-            }
-#endif
-
             if (hasWebPointerDown)
             {
                 hasWebPointerDown = false;
@@ -185,20 +177,6 @@ namespace MonsterClash
 
         private bool TryGetPrimaryUp(out Vector2 screenPoint)
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            if (compiledWebInputActive)
-            {
-                if (MonsterClashInput_HasPointerUp() != 0)
-                {
-                    screenPoint = new Vector2(
-                        MonsterClashInput_GetPointerUpX(),
-                        MonsterClashInput_GetPointerUpY());
-                    MonsterClashInput_ConsumePointerUp();
-                    return AcceptPointer(screenPoint, true);
-                }
-            }
-#endif
-
             if (hasWebPointerUp)
             {
                 hasWebPointerUp = false;
@@ -222,6 +200,33 @@ namespace MonsterClash
 
             screenPoint = default;
             return false;
+        }
+
+        private void TryHandleGuiPointerFallback()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (!hasGuiPointerCandidate) return;
+
+            hasGuiPointerCandidate = false;
+            if (Time.realtimeSinceStartup - lastDirectPointerTime < DirectPointerGraceSeconds) return;
+
+            Vector2 screenPoint = guiPointerCandidate;
+            if (hud.TryGetHandIndex(screenPoint, out int handIndex))
+            {
+                if (guiCardLatched && guiLatchedCardIndex == handIndex) return;
+
+                guiCardLatched = true;
+                guiLatchedCardIndex = handIndex;
+                HandlePointerDown(screenPoint);
+                return;
+            }
+
+            if (hud.IsPointOverInterface(screenPoint)) return;
+
+            guiCardLatched = false;
+            guiLatchedCardIndex = -1;
+            HandlePointerDown(screenPoint);
+#endif
         }
 
         private bool AcceptPointer(Vector2 screenPoint, bool released)
