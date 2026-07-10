@@ -76,7 +76,6 @@ assert.ok(director.includes('BattleBalance.HandSize'), 'Battle director should u
 assert.ok(director.includes('DoubleEnergyStartsAt'), 'Battle director should implement the final minute energy ramp');
 assert.ok(director.includes('TryDeploySelected'), 'Battle director should expose player deployment');
 assert.ok(director.includes('RunEnemyTurn'), 'Battle director should include an enemy opponent loop');
-assert.ok(director.includes('NATIVE UI 1'), 'The visible Unity HUD label should identify the native UI build');
 assert.ok(director.includes('arena.ClampDeployment'), 'Player placement should clamp into the legal arena area');
 
 const workflow = readFileSync(new URL('../.github/workflows/unity-webgl-diagnostic-build.yml', import.meta.url), 'utf8');
@@ -97,14 +96,26 @@ assert.ok(!input.includes('webPointerEvents'), 'The retired input component must
 assert.ok(!input.includes('DllImport'), 'Mobile input must not depend on a WebGL plug-in entry point');
 
 const hud = readFileSync(new URL('Runtime/BattleHud.cs', sourceRoot), 'utf8');
-assert.ok(hud.includes('CanvasScaler'), 'HUD should use a responsive Unity Canvas');
+assert.ok(hud.includes('BUILD 13'), 'HUD should carry the visible Build 13 marker');
+assert.ok(hud.includes('matchWidthOrHeight = 0f'), 'HUD should lock scaling to screen width so four cards cannot clip');
+assert.ok(hud.includes('Screen.safeArea'), 'HUD should respect phone safe areas');
+assert.ok(hud.includes('PortraitDockTop'), 'HUD should define a compact portrait dock');
+assert.ok(hud.includes('WideDockTop'), 'HUD should adapt to the Unity preview aspect ratio');
+assert.ok(hud.includes('minimumX = 0.015f + i * 0.2475f'), 'Four card slots should fit fully across the width');
+assert.ok(hud.includes('SetHudViewport'), 'HUD should reserve a dedicated middle viewport for the arena');
+assert.ok(hud.includes('CardPortrait'), 'Cards should support production portrait art without another layout rebuild');
 assert.ok(hud.includes('GraphicRaycaster'), 'HUD should retain Unity UI rendering and desktop input');
 assert.ok(!hud.includes('OnGUI'), 'The mobile HUD must not use immediate mode GUI input');
 
+const cameraFit = readFileSync(new URL('Runtime/PortraitCameraFit.cs', sourceRoot), 'utf8');
+assert.ok(cameraFit.includes('SetHudViewport'), 'Camera should expose the HUD-safe arena viewport');
+assert.ok(cameraFit.includes('battleCamera.rect'), 'Arena camera should render only between the top HUD and card dock');
+
 const directInput = readFileSync(new URL('Runtime/DirectWebInput.cs', sourceRoot), 'utf8');
-assert.ok(directInput.includes('DIRECT TAP 1'), 'Direct input should carry a visible build marker');
+assert.ok(directInput.includes('BUILD 13 · DIRECT TAP'), 'Direct input should carry the Build 13 marker');
 assert.ok(directInput.includes('public void OnWebTap'), 'Direct input should expose one browser tap entry point');
-assert.ok(directInput.includes('normalisedX * BattleBalance.HandSize'), 'Card taps should map deterministically to the four card slots');
+assert.ok(directInput.includes('Screen.safeArea'), 'Tap coordinates should align with the safe-area card layout');
+assert.ok(directInput.includes('normalisedX * BattleBalance.HandSize') || directInput.includes('safeX * BattleBalance.HandSize'), 'Card taps should map deterministically to the four card slots');
 assert.ok(directInput.includes('BattleBalance.ArenaHalfWidth'), 'Arena taps should map directly to arena width');
 assert.ok(directInput.includes('BattleBalance.ArenaHalfLength'), 'Arena taps should map directly to player deployment depth');
 assert.ok(directInput.includes('director.TryDeploySelected'), 'Direct arena taps should deploy the selected card');
@@ -113,10 +124,10 @@ const mobileTemplate = readFileSync(new URL('../WebGLTemplates/MonsterClashMobil
 assert.ok(mobileTemplate.includes('viewport-fit=cover'), 'Mobile template should support iPhone safe areas');
 assert.ok(mobileTemplate.includes('touch-action: none'), 'Mobile template should prevent browser gestures from stealing taps');
 assert.ok(mobileTemplate.includes('devicePixelRatio: isMobile ? 1'), 'Mobile template should avoid an oversized Retina framebuffer');
-assert.ok(mobileTemplate.includes('DIRECT TAP 1'), 'Loading screen and overlay should identify the direct input build');
-assert.ok(mobileTemplate.includes('SendMessage("Direct Web Input", "OnWebTap"'), 'Template should forward one deterministic tap message');
+assert.ok(mobileTemplate.includes('OPENING MONSTER CLASH · BUILD 13'), 'Loading screen should identify Build 13');
+assert.ok(mobileTemplate.includes('SendMessage("Direct Web Input", "OnWebTap"'), 'Template should retain the proven direct tap bridge');
 assert.ok(mobileTemplate.includes('touchstart'), 'Touch devices should use the proven DOM touch path');
 assert.ok(mobileTemplate.includes('normalisedX'), 'Template should normalise taps against the visible canvas');
 assert.ok(mobileTemplate.includes('normalisedY'), 'Template should normalise vertical taps against the visible canvas');
 
-console.log(`Monster Clash Unity foundation smoke test passed across ${csharpFiles.length} C# files.`);
+console.log(`Monster Clash Build 13 smoke test passed across ${csharpFiles.length} C# files.`);
