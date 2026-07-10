@@ -44,6 +44,8 @@ for (const required of [
   'DefenceTower',
   'BattleHud',
   'BattleInputController',
+  'ArenaPointerSurface',
+  'CardPointerHandler',
   'PortraitCameraFit',
   'MonsterClashBootstrap',
   'MonsterClashBuild'
@@ -78,6 +80,7 @@ assert.ok(director.includes('arena.ClampDeployment'), 'Player placement should c
 
 const workflow = readFileSync(new URL('../.github/workflows/unity-webgl-diagnostic-build.yml', import.meta.url), 'utf8');
 assert.ok(workflow.includes('MonsterClash.Editor.MonsterClashBuild.BuildWebGL'), 'Cloud build must invoke the production build entry point');
+assert.ok(workflow.includes('Run Monster Clash smoke test'), 'Pull requests should run the repository input checks');
 
 const buildEntryPoint = readFileSync(new URL('Editor/MonsterClashBuild.cs', sourceRoot), 'utf8');
 assert.ok(buildEntryPoint.includes('public static void PreExport()'), 'Unity Build Automation needs a public pre export hook');
@@ -96,14 +99,22 @@ const hud = readFileSync(new URL('Runtime/BattleHud.cs', sourceRoot), 'utf8');
 assert.ok(hud.includes('CanvasScaler'), 'HUD should use a responsive Unity Canvas');
 assert.ok(hud.includes('GraphicRaycaster'), 'HUD should use Unity UI raycasting');
 assert.ok(hud.includes('StandaloneInputModule'), 'HUD should create Unity native pointer input');
-assert.ok(hud.includes('IPointerClickHandler'), 'Cards and arena should receive native pointer clicks');
-assert.ok(hud.includes('IBeginDragHandler'), 'Cards should support native drag start');
-assert.ok(hud.includes('IEndDragHandler'), 'Cards should support native drag release');
-assert.ok(hud.includes('ArenaPointerSurface'), 'Arena should expose a full native touch surface');
-assert.ok(hud.includes('CardPointerHandler'), 'Each card should own its native pointer handler');
+assert.ok(hud.includes('ArenaPointerSurface'), 'HUD should install the native arena touch surface');
+assert.ok(hud.includes('CardPointerHandler'), 'HUD should install native pointer handling on each card');
 assert.ok(hud.includes('OnArenaClicked'), 'Arena taps should deploy the selected card');
 assert.ok(hud.includes('OnCardDragEnded'), 'Card drag release should deploy into the arena');
 assert.ok(!hud.includes('OnGUI'), 'The mobile HUD must not use immediate mode GUI input');
+
+const arenaInput = readFileSync(new URL('Runtime/ArenaPointerSurface.cs', sourceRoot), 'utf8');
+assert.ok(arenaInput.includes('IPointerClickHandler'), 'Arena should receive native Unity pointer clicks');
+assert.ok(arenaInput.includes('eventData.position'), 'Arena should pass the native screen position to gameplay');
+
+const cardInput = readFileSync(new URL('Runtime/CardPointerHandler.cs', sourceRoot), 'utf8');
+assert.ok(cardInput.includes('IPointerClickHandler'), 'Cards should receive native Unity pointer clicks');
+assert.ok(cardInput.includes('IBeginDragHandler'), 'Cards should support native drag start');
+assert.ok(cardInput.includes('IDragHandler'), 'Cards should participate in Unity drag tracking');
+assert.ok(cardInput.includes('IEndDragHandler'), 'Cards should support native drag release');
+assert.ok(cardInput.includes('eventData.position'), 'Card drag release should pass the native screen position to gameplay');
 
 const mobileTemplate = readFileSync(new URL('../WebGLTemplates/MonsterClashMobile/index.html', sourceRoot), 'utf8');
 assert.ok(mobileTemplate.includes('viewport-fit=cover'), 'Mobile template should support iPhone safe areas');
