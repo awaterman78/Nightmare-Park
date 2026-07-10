@@ -58,6 +58,21 @@
       -webkit-user-select: none;
     }
 
+    #input-version {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 6px);
+      right: calc(env(safe-area-inset-right, 0px) + 6px);
+      z-index: 4;
+      padding: 4px 7px;
+      border: 1px solid rgba(167, 255, 207, 0.7);
+      border-radius: 6px;
+      color: #a7ffcf;
+      background: rgba(3, 2, 8, 0.76);
+      font: 700 10px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0.06em;
+      pointer-events: none;
+    }
+
     #unity-loading {
       position: absolute;
       inset: 0;
@@ -70,7 +85,7 @@
       font: 700 16px/1.3 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       letter-spacing: 0.08em;
       text-align: center;
-      z-index: 2;
+      z-index: 3;
     }
 
     #unity-progress-track {
@@ -104,8 +119,9 @@
 <body>
   <main id="unity-container">
     <canvas id="unity-canvas" tabindex="0" aria-label="Monster Clash game"></canvas>
+    <div id="input-version">DIRECT TAP 1</div>
     <section id="unity-loading" aria-live="polite">
-      <div id="unity-loading-label">OPENING MONSTER CLASH · NATIVE UI 1</div>
+      <div id="unity-loading-label">OPENING MONSTER CLASH · DIRECT TAP 1</div>
       <div id="unity-progress-track" aria-hidden="true">
         <div id="unity-progress-bar"></div>
       </div>
@@ -124,6 +140,7 @@
     const cacheBust = Date.now().toString();
     const assetUrl = fileName => buildUrl + "/" + fileName + "?v=" + cacheBust;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
+    let unityInstance = null;
 
     const config = {
       dataUrl: assetUrl("{{{ DATA_FILENAME }}}"),
@@ -150,6 +167,39 @@
       loading.style.display = "grid";
     }
 
+    function sendDirectTap(clientX, clientY) {
+      if (!unityInstance) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const normalisedX = Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
+      const normalisedY = Math.max(0, Math.min(1, (rect.bottom - clientY) / Math.max(1, rect.height)));
+      const payload = normalisedX.toFixed(6) + "," + normalisedY.toFixed(6);
+
+      unityInstance.SendMessage("Direct Web Input", "OnWebTap", payload);
+    }
+
+    const directTapOptions = { passive: false, capture: true };
+    const touchCapable = navigator.maxTouchPoints > 0 || "ontouchstart" in window;
+
+    if (touchCapable) {
+      canvas.addEventListener("touchstart", event => {
+        if (event.touches.length === 0) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        canvas.focus({ preventScroll: true });
+        const touch = event.touches[0];
+        sendDirectTap(touch.clientX, touch.clientY);
+      }, directTapOptions);
+    } else {
+      canvas.addEventListener("pointerdown", event => {
+        if (event.isPrimary === false || event.button > 0) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        canvas.focus({ preventScroll: true });
+        sendDirectTap(event.clientX, event.clientY);
+      }, directTapOptions);
+    }
+
     canvas.addEventListener("contextmenu", event => event.preventDefault());
 
     const loaderScript = document.createElement("script");
@@ -157,7 +207,8 @@
     loaderScript.onload = () => {
       createUnityInstance(canvas, config, progress => {
         progressBar.style.width = Math.round(progress * 100) + "%";
-      }).then(() => {
+      }).then(instance => {
+        unityInstance = instance;
         loading.style.display = "none";
         canvas.focus({ preventScroll: true });
       }).catch(showError);
