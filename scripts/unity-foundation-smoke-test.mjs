@@ -46,6 +46,7 @@ for (const required of [
   'BattleInputController',
   'ArenaPointerSurface',
   'CardPointerHandler',
+  'DirectWebInput',
   'PortraitCameraFit',
   'MonsterClashBootstrap',
   'MonsterClashBuild'
@@ -75,7 +76,7 @@ assert.ok(director.includes('BattleBalance.HandSize'), 'Battle director should u
 assert.ok(director.includes('DoubleEnergyStartsAt'), 'Battle director should implement the final minute energy ramp');
 assert.ok(director.includes('TryDeploySelected'), 'Battle director should expose player deployment');
 assert.ok(director.includes('RunEnemyTurn'), 'Battle director should include an enemy opponent loop');
-assert.ok(director.includes('NATIVE UI 1'), 'The visible build label should identify the native Unity UI build');
+assert.ok(director.includes('NATIVE UI 1'), 'The visible Unity HUD label should identify the native UI build');
 assert.ok(director.includes('arena.ClampDeployment'), 'Player placement should clamp into the legal arena area');
 
 const workflow = readFileSync(new URL('../.github/workflows/unity-webgl-diagnostic-build.yml', import.meta.url), 'utf8');
@@ -91,37 +92,31 @@ assert.ok(buildEntryPoint.includes('PlayerSettings.WebGL.wasm2023 = false'), 'We
 
 const input = readFileSync(new URL('Runtime/BattleInputController.cs', sourceRoot), 'utf8');
 assert.ok(input.includes('enabled = false'), 'The retired custom input component should stay disabled');
-assert.ok(!input.includes('OnWebPointerEvent'), 'Input must not depend on browser SendMessage forwarding');
-assert.ok(!input.includes('webPointerEvents'), 'Input must not queue a second browser event stream');
+assert.ok(!input.includes('OnWebPointerEvent'), 'The retired input component must not own browser taps');
+assert.ok(!input.includes('webPointerEvents'), 'The retired input component must not queue browser events');
 assert.ok(!input.includes('DllImport'), 'Mobile input must not depend on a WebGL plug-in entry point');
 
 const hud = readFileSync(new URL('Runtime/BattleHud.cs', sourceRoot), 'utf8');
 assert.ok(hud.includes('CanvasScaler'), 'HUD should use a responsive Unity Canvas');
-assert.ok(hud.includes('GraphicRaycaster'), 'HUD should use Unity UI raycasting');
-assert.ok(hud.includes('StandaloneInputModule'), 'HUD should create Unity native pointer input');
-assert.ok(hud.includes('ArenaPointerSurface'), 'HUD should install the native arena touch surface');
-assert.ok(hud.includes('CardPointerHandler'), 'HUD should install native pointer handling on each card');
-assert.ok(hud.includes('OnArenaClicked'), 'Arena taps should deploy the selected card');
-assert.ok(hud.includes('OnCardDragEnded'), 'Card drag release should deploy into the arena');
+assert.ok(hud.includes('GraphicRaycaster'), 'HUD should retain Unity UI rendering and desktop input');
 assert.ok(!hud.includes('OnGUI'), 'The mobile HUD must not use immediate mode GUI input');
 
-const arenaInput = readFileSync(new URL('Runtime/ArenaPointerSurface.cs', sourceRoot), 'utf8');
-assert.ok(arenaInput.includes('IPointerClickHandler'), 'Arena should receive native Unity pointer clicks');
-assert.ok(arenaInput.includes('eventData.position'), 'Arena should pass the native screen position to gameplay');
-
-const cardInput = readFileSync(new URL('Runtime/CardPointerHandler.cs', sourceRoot), 'utf8');
-assert.ok(cardInput.includes('IPointerClickHandler'), 'Cards should receive native Unity pointer clicks');
-assert.ok(cardInput.includes('IBeginDragHandler'), 'Cards should support native drag start');
-assert.ok(cardInput.includes('IDragHandler'), 'Cards should participate in Unity drag tracking');
-assert.ok(cardInput.includes('IEndDragHandler'), 'Cards should support native drag release');
-assert.ok(cardInput.includes('eventData.position'), 'Card drag release should pass the native screen position to gameplay');
+const directInput = readFileSync(new URL('Runtime/DirectWebInput.cs', sourceRoot), 'utf8');
+assert.ok(directInput.includes('DIRECT TAP 1'), 'Direct input should carry a visible build marker');
+assert.ok(directInput.includes('public void OnWebTap'), 'Direct input should expose one browser tap entry point');
+assert.ok(directInput.includes('normalisedX * BattleBalance.HandSize'), 'Card taps should map deterministically to the four card slots');
+assert.ok(directInput.includes('BattleBalance.ArenaHalfWidth'), 'Arena taps should map directly to arena width');
+assert.ok(directInput.includes('BattleBalance.ArenaHalfLength'), 'Arena taps should map directly to player deployment depth');
+assert.ok(directInput.includes('director.TryDeploySelected'), 'Direct arena taps should deploy the selected card');
 
 const mobileTemplate = readFileSync(new URL('../WebGLTemplates/MonsterClashMobile/index.html', sourceRoot), 'utf8');
 assert.ok(mobileTemplate.includes('viewport-fit=cover'), 'Mobile template should support iPhone safe areas');
-assert.ok(mobileTemplate.includes('touch-action: none'), 'Mobile template should prevent browser gestures from stealing Unity input');
+assert.ok(mobileTemplate.includes('touch-action: none'), 'Mobile template should prevent browser gestures from stealing taps');
 assert.ok(mobileTemplate.includes('devicePixelRatio: isMobile ? 1'), 'Mobile template should avoid an oversized Retina framebuffer');
-assert.ok(mobileTemplate.includes('NATIVE UI 1'), 'Loading screen should identify the native Unity UI build');
-assert.ok(!mobileTemplate.includes('OnWebPointerEvent'), 'Template must not forward pointer events through SendMessage');
-assert.ok(!mobileTemplate.includes('pointerdown'), 'Template must leave pointer ownership to Unity');
+assert.ok(mobileTemplate.includes('DIRECT TAP 1'), 'Loading screen and overlay should identify the direct input build');
+assert.ok(mobileTemplate.includes('SendMessage("Direct Web Input", "OnWebTap"'), 'Template should forward one deterministic tap message');
+assert.ok(mobileTemplate.includes('touchstart'), 'Touch devices should use the proven DOM touch path');
+assert.ok(mobileTemplate.includes('normalisedX'), 'Template should normalise taps against the visible canvas');
+assert.ok(mobileTemplate.includes('normalisedY'), 'Template should normalise vertical taps against the visible canvas');
 
 console.log(`Monster Clash Unity foundation smoke test passed across ${csharpFiles.length} C# files.`);
