@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#030208">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>{{{ PRODUCT_NAME }}}</title>
   <style>
     :root {
@@ -102,7 +105,7 @@
   <main id="unity-container">
     <canvas id="unity-canvas" tabindex="0" aria-label="Monster Clash game"></canvas>
     <section id="unity-loading" aria-live="polite">
-      <div id="unity-loading-label">OPENING MONSTER CLASH</div>
+      <div id="unity-loading-label">OPENING MONSTER CLASH · NATIVE UI 1</div>
       <div id="unity-progress-track" aria-hidden="true">
         <div id="unity-progress-bar"></div>
       </div>
@@ -118,18 +121,19 @@
     const errorBox = document.querySelector("#unity-error");
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     const buildUrl = "Build";
-    const loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
-    let unityInstance = null;
+    const cacheBust = Date.now().toString();
+    const assetUrl = fileName => buildUrl + "/" + fileName + "?v=" + cacheBust;
+    const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
 
     const config = {
-      dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
-      frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
-      codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+      dataUrl: assetUrl("{{{ DATA_FILENAME }}}"),
+      frameworkUrl: assetUrl("{{{ FRAMEWORK_FILENAME }}}"),
+      codeUrl: assetUrl("{{{ CODE_FILENAME }}}"),
 #if MEMORY_FILENAME
-      memoryUrl: buildUrl + "/{{{ MEMORY_FILENAME }}}",
+      memoryUrl: assetUrl("{{{ MEMORY_FILENAME }}}"),
 #endif
 #if SYMBOLS_FILENAME
-      symbolsUrl: buildUrl + "/{{{ SYMBOLS_FILENAME }}}",
+      symbolsUrl: assetUrl("{{{ SYMBOLS_FILENAME }}}"),
 #endif
       streamingAssetsUrl: "StreamingAssets",
       companyName: "{{{ COMPANY_NAME }}}",
@@ -146,42 +150,6 @@
       loading.style.display = "grid";
     }
 
-    function toUnityPoint(clientX, clientY) {
-      const rect = canvas.getBoundingClientRect();
-      const renderWidth = canvas.width || rect.width;
-      const renderHeight = canvas.height || rect.height;
-      const x = (clientX - rect.left) * renderWidth / Math.max(1, rect.width);
-      const y = (rect.bottom - clientY) * renderHeight / Math.max(1, rect.height);
-      return Math.round(x) + "," + Math.round(y);
-    }
-
-    function forwardPointer(event) {
-      if (!unityInstance || event.isPrimary === false || event.button > 0) return;
-      event.preventDefault();
-      canvas.focus({ preventScroll: true });
-      unityInstance.SendMessage(
-        "Battle Director",
-        "OnWebPointerDown",
-        toUnityPoint(event.clientX, event.clientY)
-      );
-    }
-
-    if (window.PointerEvent) {
-      canvas.addEventListener("pointerdown", forwardPointer, { passive: false });
-    } else {
-      canvas.addEventListener("touchstart", event => {
-        if (!unityInstance || event.touches.length === 0) return;
-        event.preventDefault();
-        const touch = event.touches[0];
-        unityInstance.SendMessage(
-          "Battle Director",
-          "OnWebPointerDown",
-          toUnityPoint(touch.clientX, touch.clientY)
-        );
-      }, { passive: false });
-    }
-
-    canvas.addEventListener("touchmove", event => event.preventDefault(), { passive: false });
     canvas.addEventListener("contextmenu", event => event.preventDefault());
 
     const loaderScript = document.createElement("script");
@@ -189,8 +157,7 @@
     loaderScript.onload = () => {
       createUnityInstance(canvas, config, progress => {
         progressBar.style.width = Math.round(progress * 100) + "%";
-      }).then(instance => {
-        unityInstance = instance;
+      }).then(() => {
         loading.style.display = "none";
         canvas.focus({ preventScroll: true });
       }).catch(showError);

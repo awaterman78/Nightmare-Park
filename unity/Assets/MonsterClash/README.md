@@ -13,7 +13,7 @@ This folder is the clean Unity 6 gameplay foundation for Monster Clash.
 * Enemy deployment AI that reacts to deep threats.
 * Three minute match, timed resolution, victory, defeat and restart.
 * Portrait WebGL input and HUD.
-* Responsive iPhone safe area template with direct pointer forwarding.
+* Responsive iPhone safe area template with native touch input, page forwarding and a Unity-side mobile pointer fallback.
 
 ## Open in Unity
 

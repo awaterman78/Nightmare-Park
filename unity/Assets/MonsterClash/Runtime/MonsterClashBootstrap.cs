@@ -42,6 +42,7 @@ namespace MonsterClash
 
             BattleInputController input = director.gameObject.AddComponent<BattleInputController>();
             input.Initialise(director, battleCamera, hud);
+            hud.AttachInput(input);
         }
 
         private static Camera CreateCamera()

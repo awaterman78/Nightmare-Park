@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'unity/**'
+      - 'scripts/unity-foundation-smoke-test.mjs'
       - '.github/workflows/unity-webgl-diagnostic-build.yml'
 
 permissions:
@@ -44,6 +45,9 @@ jobs:
           test -f unity/ProjectSettings/ProjectVersion.txt
           echo "Basic Unity project files found."
 
+      - name: Run Monster Clash smoke test
+        run: node scripts/unity-foundation-smoke-test.mjs
+
   unity-build:
     name: Unity WebGL Build Attempt
     needs: diagnostics
@@ -64,6 +68,8 @@ jobs:
             Library-WebGL-
 
       - name: Build Monster Clash WebGL with GameCI
+        id: unity_build
+        continue-on-error: true
         uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -78,6 +84,47 @@ jobs:
           allowDirtyBuild: true
           customParameters: -executeMethod MonsterClash.Editor.MonsterClashBuild.BuildWebGL
 
+      - name: Collect Unity diagnostics
+        if: always()
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          mkdir -p diagnostics
+          {
+            echo "Unity build outcome: ${{ steps.unity_build.outcome }}"
+            if [ -n "${UNITY_LICENSE:-}" ]; then echo "UNITY_LICENSE: present"; else echo "UNITY_LICENSE: missing"; fi
+            if [ -n "${UNITY_EMAIL:-}" ]; then echo "UNITY_EMAIL: present"; else echo "UNITY_EMAIL: missing"; fi
+            if [ -n "${UNITY_PASSWORD:-}" ]; then echo "UNITY_PASSWORD: present"; else echo "UNITY_PASSWORD: missing"; fi
+            echo ""
+            echo "Docker containers:"
+            docker ps -a || true
+          } > diagnostics/summary.txt
+
+          find "$GITHUB_WORKSPACE" "$HOME" /tmp -type f \( -name 'Editor.log' -o -name '*.log' \) -size -20M 2>/dev/null | sort -u > diagnostics/log-files.txt || true
+
+          while IFS= read -r log_file; do
+            [ -f "$log_file" ] || continue
+            safe_name=$(echo "$log_file" | sed 's#[/ ]#_#g')
+            {
+              echo "===== $log_file ====="
+              tail -n 500 "$log_file" || true
+            } > "diagnostics/${safe_name}.txt"
+          done < diagnostics/log-files.txt
+
+          for container_id in $(docker ps -aq 2>/dev/null); do
+            docker logs "$container_id" > "diagnostics/docker-${container_id}.log" 2>&1 || true
+          done
+
+      - name: Upload Unity diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Unity-Diagnostics
+          path: diagnostics
+          if-no-files-found: warn
+
       - name: Upload WebGL build artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -85,3 +132,7 @@ jobs:
           name: Monster-Clash-WebGL
           path: builds
           if-no-files-found: warn
+
+      - name: Fail when Unity build failed
+        if: steps.unity_build.outcome == 'failure'
+        run: exit 1
