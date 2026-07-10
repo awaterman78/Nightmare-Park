@@ -79,5 +79,22 @@ assert.ok(workflow.includes('MonsterClash.Editor.MonsterClashBuild.BuildWebGL'),
 
 const buildEntryPoint = readFileSync(new URL('Editor/MonsterClashBuild.cs', sourceRoot), 'utf8');
 assert.ok(buildEntryPoint.includes('public static void PreExport()'), 'Unity Build Automation needs a public pre export hook');
+assert.ok(buildEntryPoint.includes('PROJECT:MonsterClashMobile'), 'Web builds should use the mobile responsive template');
+assert.ok(buildEntryPoint.includes('defaultWebScreenWidth = 430'), 'Web builds should default to a portrait canvas');
+assert.ok(buildEntryPoint.includes('GraphicsDeviceType.OpenGLES3'), 'iPhone builds should target the stable WebGL 2 graphics path');
+assert.ok(buildEntryPoint.includes('PlayerSettings.WebGL.wasm2023 = false'), 'Web builds should retain Safari 15 compatibility');
+
+const input = readFileSync(new URL('Runtime/BattleInputController.cs', sourceRoot), 'utf8');
+assert.ok(input.includes('OnWebPointerDown'), 'Web builds need a direct browser pointer bridge');
+assert.ok(input.includes('hud.TryGetHandIndex'), 'Card selection should not depend on immediate mode GUI touch handling');
+
+const hud = readFileSync(new URL('Runtime/BattleHud.cs', sourceRoot), 'utf8');
+assert.ok(hud.includes('public bool TryGetHandIndex'), 'HUD should expose deterministic mobile card hit testing');
+
+const mobileTemplate = readFileSync(new URL('../WebGLTemplates/MonsterClashMobile/index.html', sourceRoot), 'utf8');
+assert.ok(mobileTemplate.includes('viewport-fit=cover'), 'Mobile template should support iPhone safe areas');
+assert.ok(mobileTemplate.includes('touch-action: none'), 'Mobile template should prevent browser gestures from stealing game input');
+assert.ok(mobileTemplate.includes('devicePixelRatio: isMobile ? 1'), 'Mobile template should avoid an oversized Retina framebuffer');
+assert.ok(mobileTemplate.includes('OnWebPointerDown'), 'Mobile template should forward pointer input into Unity');
 
 console.log(`Monster Clash Unity foundation smoke test passed across ${csharpFiles.length} C# files.`);

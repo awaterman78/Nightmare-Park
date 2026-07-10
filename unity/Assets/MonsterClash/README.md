@@ -13,6 +13,7 @@ This folder is the clean Unity 6 gameplay foundation for Monster Clash.
 * Enemy deployment AI that reacts to deep threats.
 * Three minute match, timed resolution, victory, defeat and restart.
 * Portrait WebGL input and HUD.
+* Responsive iPhone safe area template with direct pointer forwarding.
 
 ## Open in Unity
 
@@ -25,6 +26,8 @@ The scene deliberately remains almost empty. `MonsterClashBootstrap` constructs 
 Use `Monster Clash > Build WebGL`, or run the GitHub Actions Unity WebGL workflow. The build output is written to `builds/MonsterClashWebGL` at repository root.
 
 For Unity Build Automation, set the project subfolder to `unity` and the pre export method to `MonsterClash.Editor.MonsterClashBuild.PreExport`.
+
+The pre export hook configures a portrait mobile canvas, WebGL 2, Safari compatible WebAssembly, geometric memory growth, decompression fallback, and the `MonsterClashMobile` template automatically.
 
 ## Art boundary
 

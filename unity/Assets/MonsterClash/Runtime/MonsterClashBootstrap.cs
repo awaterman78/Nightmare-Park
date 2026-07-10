@@ -15,7 +15,7 @@ namespace MonsterClash
 
         private void BuildBattle()
         {
-            Application.targetFrameRate = 60;
+            Application.targetFrameRate = Application.isMobilePlatform ? 30 : 60;
             QualitySettings.vSyncCount = 0;
             Screen.orientation = ScreenOrientation.Portrait;
 
@@ -37,11 +37,11 @@ namespace MonsterClash
             CreateTowers(arenaRoot, director);
             CreateDeploymentOverlay(arenaRoot, director);
 
-            BattleInputController input = director.gameObject.AddComponent<BattleInputController>();
-            input.Initialise(director, battleCamera);
-
             BattleHud hud = director.gameObject.AddComponent<BattleHud>();
             hud.Initialise(director);
+
+            BattleInputController input = director.gameObject.AddComponent<BattleInputController>();
+            input.Initialise(director, battleCamera, hud);
         }
 
         private static Camera CreateCamera()

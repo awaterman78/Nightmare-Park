@@ -13,6 +13,10 @@ namespace MonsterClash
         private GUIStyle resultStyle;
         private Texture2D panelTexture;
 
+        private const float OuterMargin = 8f;
+        private const float DockInnerMargin = 12f;
+        private const float CardGap = 6f;
+
         public void Initialise(BattleDirector battleDirector)
         {
             director = battleDirector;
@@ -26,7 +30,7 @@ namespace MonsterClash
             float width = Screen.width;
             float height = Screen.height;
 
-            DrawPanel(new Rect(8f, 8f, width - 16f, 92f), new Color(0.025f, 0.015f, 0.05f, 0.9f));
+            DrawPanel(GetTopPanelRect(width), new Color(0.025f, 0.015f, 0.05f, 0.9f));
             GUI.Label(new Rect(18f, 12f, width - 36f, 28f), "MONSTER CLASH", titleStyle);
 
             int totalSeconds = Mathf.CeilToInt(director.TimeRemaining);
@@ -36,21 +40,16 @@ namespace MonsterClash
             GUI.Label(new Rect(18f, 42f, width - 36f, 24f), "ENEMY " + enemyCore + "     " + timer + "     YOU " + playerCore, hudStyle);
             GUI.Label(new Rect(18f, 68f, width - 36f, 22f), director.StatusMessage, smallStyle);
 
-            float dockHeight = Mathf.Clamp(height * 0.205f, 150f, 196f);
-            Rect dock = new Rect(8f, height - dockHeight - 8f, width - 16f, dockHeight);
+            Rect dock = GetDockRect(width, height);
             DrawPanel(dock, new Color(0.018f, 0.012f, 0.035f, 0.94f));
-            DrawEnergy(new Rect(dock.x + 12f, dock.y + 10f, dock.width - 24f, 24f));
+            DrawEnergy(new Rect(dock.x + DockInnerMargin, dock.y + 10f, dock.width - DockInnerMargin * 2f, 24f));
 
             IReadOnlyList<MonsterCard> hand = director.PlayerHand;
-            float gap = 6f;
-            float cardsTop = dock.y + 42f;
-            float cardHeight = dock.height - 52f;
-            float cardWidth = (dock.width - 24f - gap * 3f) / 4f;
 
             for (int i = 0; i < hand.Count; i++)
             {
                 MonsterCard card = hand[i];
-                Rect rect = new Rect(dock.x + 12f + i * (cardWidth + gap), cardsTop, cardWidth, cardHeight);
+                Rect rect = GetCardRect(dock, i);
                 bool selected = director.SelectedHandIndex == i;
                 bool affordable = director.PlayerEnergy + 0.001f >= card.EnergyCost;
                 GUI.color = selected
@@ -58,10 +57,7 @@ namespace MonsterClash
                     : affordable ? Color.white : new Color(0.48f, 0.48f, 0.55f, 1f);
 
                 string label = card.DisplayName.ToUpperInvariant() + "\n" + card.EnergyCost + " ENERGY";
-                if (GUI.Button(rect, label, cardStyle))
-                {
-                    director.SelectPlayerCard(i);
-                }
+                GUI.Box(rect, label, cardStyle);
             }
 
             GUI.color = Color.white;
@@ -70,6 +66,42 @@ namespace MonsterClash
             {
                 DrawResult(width, height);
             }
+        }
+
+        public bool TryGetHandIndex(Vector2 screenPoint, out int handIndex)
+        {
+            handIndex = -1;
+            if (director == null || director.PlayerHand == null) return false;
+
+            Vector2 guiPoint = ScreenToGuiPoint(screenPoint);
+            Rect dock = GetDockRect(Screen.width, Screen.height);
+            int count = Mathf.Min(BattleBalance.HandSize, director.PlayerHand.Count);
+
+            for (int i = 0; i < count; i++)
+            {
+                if (!GetCardRect(dock, i).Contains(guiPoint)) continue;
+                handIndex = i;
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool IsPointOverInterface(Vector2 screenPoint)
+        {
+            Vector2 guiPoint = ScreenToGuiPoint(screenPoint);
+            return GetTopPanelRect(Screen.width).Contains(guiPoint)
+                || GetDockRect(Screen.width, Screen.height).Contains(guiPoint);
+        }
+
+        public bool IsPointOverRestart(Vector2 screenPoint)
+        {
+            if (director == null || (director.Phase != BattlePhase.Victory && director.Phase != BattlePhase.Defeat))
+            {
+                return false;
+            }
+
+            return GetRestartRect(Screen.width, Screen.height).Contains(ScreenToGuiPoint(screenPoint));
         }
 
         private void DrawEnergy(Rect rect)
@@ -92,10 +124,47 @@ namespace MonsterClash
             string result = director.Phase == BattlePhase.Victory ? "VICTORY" : "DEFEAT";
             GUI.Label(new Rect(0f, height * 0.37f, width, 74f), result, resultStyle);
             GUI.Label(new Rect(20f, height * 0.47f, width - 40f, 34f), director.StatusMessage, hudStyle);
-            if (GUI.Button(new Rect(width * 0.5f - 90f, height * 0.55f, 180f, 52f), "PLAY AGAIN", cardStyle))
-            {
-                director.Restart();
-            }
+            GUI.Box(GetRestartRect(width, height), "PLAY AGAIN", cardStyle);
+        }
+
+        private static Rect GetTopPanelRect(float width)
+        {
+            return new Rect(OuterMargin, OuterMargin, Mathf.Max(1f, width - OuterMargin * 2f), 92f);
+        }
+
+        private static Rect GetDockRect(float width, float height)
+        {
+            float dockHeight = Mathf.Clamp(height * 0.205f, 150f, 196f);
+            return new Rect(
+                OuterMargin,
+                height - dockHeight - OuterMargin,
+                Mathf.Max(1f, width - OuterMargin * 2f),
+                dockHeight);
+        }
+
+        private static Rect GetCardRect(Rect dock, int handIndex)
+        {
+            float cardsTop = dock.y + 42f;
+            float cardHeight = dock.height - 52f;
+            float cardWidth = Mathf.Max(
+                1f,
+                (dock.width - DockInnerMargin * 2f - CardGap * (BattleBalance.HandSize - 1)) / BattleBalance.HandSize);
+
+            return new Rect(
+                dock.x + DockInnerMargin + handIndex * (cardWidth + CardGap),
+                cardsTop,
+                cardWidth,
+                cardHeight);
+        }
+
+        private static Rect GetRestartRect(float width, float height)
+        {
+            return new Rect(width * 0.5f - 90f, height * 0.55f, 180f, 52f);
+        }
+
+        private static Vector2 ScreenToGuiPoint(Vector2 screenPoint)
+        {
+            return new Vector2(screenPoint.x, Screen.height - screenPoint.y);
         }
 
         private void DrawPanel(Rect rect, Color colour)
