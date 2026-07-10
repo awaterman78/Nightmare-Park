@@ -146,66 +146,75 @@
       loading.style.display = "grid";
     }
 
-    function toUnityPoint(clientX, clientY) {
-      const rect = canvas.getBoundingClientRect();
-      const renderWidth = canvas.width || rect.width;
-      const renderHeight = canvas.height || rect.height;
-      const x = (clientX - rect.left) * renderWidth / Math.max(1, rect.width);
-      const y = (rect.bottom - clientY) * renderHeight / Math.max(1, rect.height);
-      return Math.round(x) + "," + Math.round(y);
+    function clamp01(value) {
+      return Math.max(0, Math.min(1, value));
     }
 
-    function forwardPointer(event, methodName) {
-      if (event.isPrimary === false || event.button > 0) return;
+    function toNormalisedUnityPoint(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = clamp01((clientX - rect.left) / Math.max(1, rect.width));
+      const y = clamp01((rect.bottom - clientY) / Math.max(1, rect.height));
+      return x.toFixed(6) + "," + y.toFixed(6);
+    }
+
+    function sendPointer(phase, clientX, clientY) {
+      if (!unityInstance) return;
+      unityInstance.SendMessage(
+        "Battle Director",
+        "OnWebPointerEvent",
+        phase + "," + toNormalisedUnityPoint(clientX, clientY)
+      );
+    }
+
+    function handlePointer(event, phase) {
+      if (event.isPrimary === false || (typeof event.button === "number" && event.button > 0)) return;
       event.preventDefault();
       canvas.focus({ preventScroll: true });
 
-      const released = methodName === "OnWebPointerUp";
-      if (!released && canvas.setPointerCapture) {
+      if (phase === "down" && canvas.setPointerCapture) {
         try {
           canvas.setPointerCapture(event.pointerId);
         } catch (error) {
         }
       }
-      if (!unityInstance) return;
 
-      unityInstance.SendMessage(
-        "Battle Director",
-        methodName,
-        toUnityPoint(event.clientX, event.clientY)
-      );
+      sendPointer(phase, event.clientX, event.clientY);
     }
 
     if (window.PointerEvent) {
-      canvas.addEventListener("pointerdown", event => forwardPointer(event, "OnWebPointerDown"), { passive: false });
-      canvas.addEventListener("pointerup", event => forwardPointer(event, "OnWebPointerUp"), { passive: false });
+      canvas.addEventListener("pointerdown", event => handlePointer(event, "down"), { passive: false });
+      canvas.addEventListener("pointermove", event => handlePointer(event, "move"), { passive: false });
+      canvas.addEventListener("pointerup", event => handlePointer(event, "up"), { passive: false });
+      canvas.addEventListener("pointercancel", event => handlePointer(event, "cancel"), { passive: false });
     } else {
       canvas.addEventListener("touchstart", event => {
         if (event.touches.length === 0) return;
         event.preventDefault();
         const touch = event.touches[0];
-        if (!unityInstance) return;
-        unityInstance.SendMessage(
-          "Battle Director",
-          "OnWebPointerDown",
-          toUnityPoint(touch.clientX, touch.clientY)
-        );
+        sendPointer("down", touch.clientX, touch.clientY);
+      }, { passive: false });
+
+      canvas.addEventListener("touchmove", event => {
+        if (event.touches.length === 0) return;
+        event.preventDefault();
+        const touch = event.touches[0];
+        sendPointer("move", touch.clientX, touch.clientY);
       }, { passive: false });
 
       canvas.addEventListener("touchend", event => {
         if (event.changedTouches.length === 0) return;
         event.preventDefault();
         const touch = event.changedTouches[0];
-        if (!unityInstance) return;
-        unityInstance.SendMessage(
-          "Battle Director",
-          "OnWebPointerUp",
-          toUnityPoint(touch.clientX, touch.clientY)
-        );
+        sendPointer("up", touch.clientX, touch.clientY);
+      }, { passive: false });
+
+      canvas.addEventListener("touchcancel", event => {
+        event.preventDefault();
+        const touch = event.changedTouches.length > 0 ? event.changedTouches[0] : null;
+        sendPointer("cancel", touch ? touch.clientX : 0, touch ? touch.clientY : 0);
       }, { passive: false });
     }
 
-    canvas.addEventListener("touchmove", event => event.preventDefault(), { passive: false });
     canvas.addEventListener("contextmenu", event => event.preventDefault());
 
     const loaderScript = document.createElement("script");
