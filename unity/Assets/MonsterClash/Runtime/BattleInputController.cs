@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 
@@ -5,29 +6,37 @@ namespace MonsterClash
 {
     public sealed class BattleInputController : MonoBehaviour
     {
+        private enum WebPointerPhase
+        {
+            Down,
+            Move,
+            Up,
+            Cancel
+        }
+
+        private readonly struct WebPointerSample
+        {
+            public WebPointerSample(WebPointerPhase phase, Vector2 screenPoint)
+            {
+                Phase = phase;
+                ScreenPoint = screenPoint;
+            }
+
+            public WebPointerPhase Phase { get; }
+            public Vector2 ScreenPoint { get; }
+        }
+
+        private const int MaximumQueuedWebEvents = 64;
+
+        private readonly Queue<WebPointerSample> webPointerEvents = new Queue<WebPointerSample>();
+
         private BattleDirector director;
         private Camera battleCamera;
         private BattleHud hud;
-        private bool hasWebPointerDown;
-        private bool hasWebPointerUp;
         private bool draggingFromCard;
-        private bool hasGuiPointer;
-        private bool hasGuiPointerCandidate;
-        private bool directPointerHeld;
-        private bool guiCardLatched;
-        private int guiLatchedCardIndex = -1;
-        private Vector2 webPointerDown;
-        private Vector2 webPointerUp;
-        private Vector2 lastGuiPointer;
-        private Vector2 guiPointerCandidate;
-        private float lastDownTime = -10f;
-        private float lastUpTime = -10f;
-        private float lastDirectPointerTime = -10f;
-        private Vector2 lastDownPosition;
-        private Vector2 lastUpPosition;
-
-        private const float GuiPointerMoveThresholdSquared = 16f;
-        private const float DirectPointerGraceSeconds = 0.25f;
+        private bool pressedCardWasAlreadySelected;
+        private int pressedCardIndex = -1;
+        private bool nativePointerHeld;
 
         public void Initialise(BattleDirector battleDirector, Camera cameraToUse, BattleHud battleHud)
         {
@@ -42,77 +51,107 @@ namespace MonsterClash
 
             if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
             {
-                draggingFromCard = false;
+                ResetPointerState();
                 director.CancelSelection();
                 return;
             }
 
-            if (TryGetPrimaryDown(out Vector2 downPoint))
-            {
-                directPointerHeld = true;
-                lastDirectPointerTime = Time.realtimeSinceStartup;
-                hasGuiPointerCandidate = false;
-                HandlePointerDown(downPoint);
-                return;
-            }
-
-            if (TryGetPrimaryUp(out Vector2 upPoint))
-            {
-                if (directPointerHeld)
-                {
-                    directPointerHeld = false;
-                    lastDirectPointerTime = Time.realtimeSinceStartup;
-                    hasGuiPointerCandidate = false;
-                    HandlePointerUp(upPoint);
-                    return;
-                }
-            }
-
-            TryHandleGuiPointerFallback();
-        }
-
-        public void ObserveGuiPointer(Vector2 guiPoint)
-        {
 #if UNITY_WEBGL && !UNITY_EDITOR
-            if (!Input.touchSupported || Screen.height <= Screen.width) return;
-
-            Vector2 screenPoint = new Vector2(guiPoint.x, Screen.height - guiPoint.y);
-            if (!hasGuiPointer)
+            while (webPointerEvents.Count > 0)
             {
-                hasGuiPointer = true;
-                lastGuiPointer = screenPoint;
-                return;
+                WebPointerSample sample = webPointerEvents.Dequeue();
+                HandlePointer(sample.Phase, sample.ScreenPoint);
             }
-
-            if (Vector2.SqrMagnitude(screenPoint - lastGuiPointer) < GuiPointerMoveThresholdSquared) return;
-
-            lastGuiPointer = screenPoint;
-            guiPointerCandidate = screenPoint;
-            hasGuiPointerCandidate = true;
+#else
+            HandleNativeInput();
 #endif
         }
 
         [UnityEngine.Scripting.Preserve]
-        public void OnWebPointerDown(string payload)
+        public void OnWebPointerEvent(string payload)
         {
-            if (!TryParseWebPoint(payload, out Vector2 point)) return;
-            webPointerDown = point;
-            hasWebPointerDown = true;
+            if (!TryParseWebPointer(payload, out WebPointerSample sample)) return;
+
+            if (webPointerEvents.Count >= MaximumQueuedWebEvents)
+            {
+                webPointerEvents.Dequeue();
+            }
+
+            webPointerEvents.Enqueue(sample);
         }
 
-        [UnityEngine.Scripting.Preserve]
-        public void OnWebPointerUp(string payload)
+        // Kept as a harmless compatibility hook for older scenes. Browser input no longer uses GUI hover state.
+        public void ObserveGuiPointer(Vector2 guiPoint)
         {
-            if (!TryParseWebPoint(payload, out Vector2 point)) return;
-            webPointerUp = point;
-            hasWebPointerUp = true;
+        }
+
+        private void HandleNativeInput()
+        {
+            if (Input.touchCount > 0)
+            {
+                Touch touch = Input.GetTouch(0);
+                switch (touch.phase)
+                {
+                    case TouchPhase.Began:
+                        nativePointerHeld = true;
+                        HandlePointer(WebPointerPhase.Down, touch.position);
+                        break;
+                    case TouchPhase.Moved:
+                    case TouchPhase.Stationary:
+                        if (nativePointerHeld) HandlePointer(WebPointerPhase.Move, touch.position);
+                        break;
+                    case TouchPhase.Ended:
+                        if (nativePointerHeld) HandlePointer(WebPointerPhase.Up, touch.position);
+                        nativePointerHeld = false;
+                        break;
+                    case TouchPhase.Canceled:
+                        HandlePointer(WebPointerPhase.Cancel, touch.position);
+                        nativePointerHeld = false;
+                        break;
+                }
+
+                return;
+            }
+
+            if (Input.GetMouseButtonDown(0))
+            {
+                nativePointerHeld = true;
+                HandlePointer(WebPointerPhase.Down, Input.mousePosition);
+            }
+            else if (nativePointerHeld && Input.GetMouseButton(0))
+            {
+                HandlePointer(WebPointerPhase.Move, Input.mousePosition);
+            }
+            else if (nativePointerHeld && Input.GetMouseButtonUp(0))
+            {
+                HandlePointer(WebPointerPhase.Up, Input.mousePosition);
+                nativePointerHeld = false;
+            }
+        }
+
+        private void HandlePointer(WebPointerPhase phase, Vector2 screenPoint)
+        {
+            switch (phase)
+            {
+                case WebPointerPhase.Down:
+                    HandlePointerDown(screenPoint);
+                    break;
+                case WebPointerPhase.Move:
+                    break;
+                case WebPointerPhase.Up:
+                    HandlePointerUp(screenPoint);
+                    break;
+                case WebPointerPhase.Cancel:
+                    ResetPointerState();
+                    break;
+            }
         }
 
         private void HandlePointerDown(Vector2 screenPoint)
         {
             if (director.Phase == BattlePhase.Victory || director.Phase == BattlePhase.Defeat)
             {
-                draggingFromCard = false;
+                ResetPointerState();
                 if (hud.IsPointOverRestart(screenPoint)) director.Restart();
                 return;
             }
@@ -122,149 +161,115 @@ namespace MonsterClash
             if (hud.TryGetHandIndex(screenPoint, out int handIndex))
             {
                 draggingFromCard = true;
-                director.SelectPlayerCard(handIndex);
+                pressedCardIndex = handIndex;
+                pressedCardWasAlreadySelected = director.SelectedHandIndex == handIndex;
+
+                if (!pressedCardWasAlreadySelected)
+                {
+                    director.SelectPlayerCard(handIndex);
+                }
+
                 return;
             }
 
-            draggingFromCard = false;
+            ResetPointerState();
             if (director.SelectedHandIndex < 0 || hud.IsPointOverInterface(screenPoint)) return;
             TryDeployAt(screenPoint);
         }
 
         private void HandlePointerUp(Vector2 screenPoint)
         {
-            if (!draggingFromCard) return;
-            draggingFromCard = false;
+            if (!draggingFromCard)
+            {
+                ResetPointerState();
+                return;
+            }
 
-            if (director.Phase != BattlePhase.Playing || director.SelectedHandIndex < 0) return;
-            if (hud.IsPointOverInterface(screenPoint)) return;
-            TryDeployAt(screenPoint);
+            bool releasedOverSameCard = hud.TryGetHandIndex(screenPoint, out int handIndex)
+                && handIndex == pressedCardIndex;
+
+            if (releasedOverSameCard)
+            {
+                if (pressedCardWasAlreadySelected)
+                {
+                    director.CancelSelection();
+                }
+
+                ResetPointerState();
+                return;
+            }
+
+            if (director.Phase == BattlePhase.Playing
+                && director.SelectedHandIndex >= 0
+                && !hud.IsPointOverInterface(screenPoint))
+            {
+                TryDeployAt(screenPoint);
+            }
+
+            ResetPointerState();
         }
 
         private void TryDeployAt(Vector2 screenPoint)
         {
+            Rect pixelRect = battleCamera.pixelRect;
+            screenPoint.x = Mathf.Clamp(screenPoint.x, pixelRect.xMin, pixelRect.xMax);
+            screenPoint.y = Mathf.Clamp(screenPoint.y, pixelRect.yMin, pixelRect.yMax);
+
             Ray ray = battleCamera.ScreenPointToRay(screenPoint);
             Plane floor = new Plane(Vector3.up, Vector3.zero);
             if (!floor.Raycast(ray, out float distance)) return;
+
             director.TryDeploySelected(ray.GetPoint(distance));
         }
 
-        private bool TryGetPrimaryDown(out Vector2 screenPoint)
+        private void ResetPointerState()
         {
-            if (hasWebPointerDown)
-            {
-                hasWebPointerDown = false;
-                screenPoint = webPointerDown;
-                return AcceptPointer(screenPoint, false);
-            }
-
-            if (Input.touchCount > 0)
-            {
-                Touch touch = Input.GetTouch(0);
-                screenPoint = touch.position;
-                return touch.phase == TouchPhase.Began && AcceptPointer(screenPoint, false);
-            }
-
-            if (Input.GetMouseButtonDown(0))
-            {
-                screenPoint = Input.mousePosition;
-                return AcceptPointer(screenPoint, false);
-            }
-
-            screenPoint = default;
-            return false;
+            draggingFromCard = false;
+            pressedCardWasAlreadySelected = false;
+            pressedCardIndex = -1;
         }
 
-        private bool TryGetPrimaryUp(out Vector2 screenPoint)
+        private static bool TryParseWebPointer(string payload, out WebPointerSample sample)
         {
-            if (hasWebPointerUp)
-            {
-                hasWebPointerUp = false;
-                screenPoint = webPointerUp;
-                return AcceptPointer(screenPoint, true);
-            }
-
-            if (Input.touchCount > 0)
-            {
-                Touch touch = Input.GetTouch(0);
-                screenPoint = touch.position;
-                return (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
-                    && AcceptPointer(screenPoint, true);
-            }
-
-            if (Input.GetMouseButtonUp(0))
-            {
-                screenPoint = Input.mousePosition;
-                return AcceptPointer(screenPoint, true);
-            }
-
-            screenPoint = default;
-            return false;
-        }
-
-        private void TryHandleGuiPointerFallback()
-        {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            if (!hasGuiPointerCandidate) return;
-
-            hasGuiPointerCandidate = false;
-            if (Time.realtimeSinceStartup - lastDirectPointerTime < DirectPointerGraceSeconds) return;
-
-            Vector2 screenPoint = guiPointerCandidate;
-            if (hud.TryGetHandIndex(screenPoint, out int handIndex))
-            {
-                if (guiCardLatched && guiLatchedCardIndex == handIndex) return;
-
-                guiCardLatched = true;
-                guiLatchedCardIndex = handIndex;
-                HandlePointerDown(screenPoint);
-                return;
-            }
-
-            if (hud.IsPointOverInterface(screenPoint)) return;
-
-            guiCardLatched = false;
-            guiLatchedCardIndex = -1;
-            HandlePointerDown(screenPoint);
-#endif
-        }
-
-        private bool AcceptPointer(Vector2 screenPoint, bool released)
-        {
-            float now = Time.realtimeSinceStartup;
-            float lastTime = released ? lastUpTime : lastDownTime;
-            Vector2 lastPosition = released ? lastUpPosition : lastDownPosition;
-            bool duplicate = now - lastTime < 0.2f
-                && Vector2.SqrMagnitude(screenPoint - lastPosition) < 1600f;
-
-            if (duplicate) return false;
-
-            if (released)
-            {
-                lastUpTime = now;
-                lastUpPosition = screenPoint;
-            }
-            else
-            {
-                lastDownTime = now;
-                lastDownPosition = screenPoint;
-            }
-
-            return true;
-        }
-
-        private static bool TryParseWebPoint(string payload, out Vector2 point)
-        {
-            point = default;
+            sample = default;
             if (string.IsNullOrWhiteSpace(payload)) return false;
 
             string[] parts = payload.Split(',');
-            if (parts.Length != 2) return false;
-            if (!float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x)) return false;
-            if (!float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y)) return false;
+            if (parts.Length != 3) return false;
+            if (!TryParsePhase(parts[0], out WebPointerPhase phase)) return false;
+            if (!float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float normalisedX)) return false;
+            if (!float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float normalisedY)) return false;
 
-            point = new Vector2(x, y);
+            float width = Mathf.Max(1f, Screen.width - 1f);
+            float height = Mathf.Max(1f, Screen.height - 1f);
+            Vector2 screenPoint = new Vector2(
+                Mathf.Clamp01(normalisedX) * width,
+                Mathf.Clamp01(normalisedY) * height);
+
+            sample = new WebPointerSample(phase, screenPoint);
             return true;
+        }
+
+        private static bool TryParsePhase(string value, out WebPointerPhase phase)
+        {
+            switch (value)
+            {
+                case "down":
+                    phase = WebPointerPhase.Down;
+                    return true;
+                case "move":
+                    phase = WebPointerPhase.Move;
+                    return true;
+                case "up":
+                    phase = WebPointerPhase.Up;
+                    return true;
+                case "cancel":
+                    phase = WebPointerPhase.Cancel;
+                    return true;
+                default:
+                    phase = default;
+                    return false;
+            }
         }
     }
 }
