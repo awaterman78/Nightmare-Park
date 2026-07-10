@@ -86,7 +86,14 @@ assert.ok(buildEntryPoint.includes('PlayerSettings.WebGL.wasm2023 = false'), 'We
 
 const input = readFileSync(new URL('Runtime/BattleInputController.cs', sourceRoot), 'utf8');
 assert.ok(input.includes('OnWebPointerDown'), 'Web builds need a direct browser pointer bridge');
+assert.ok(input.includes('MonsterClashInput_Install'), 'Web builds need a compiled browser pointer bridge');
+assert.ok(input.includes('OnWebPointerUp'), 'Web builds need pointer release input for card dragging');
 assert.ok(input.includes('hud.TryGetHandIndex'), 'Card selection should not depend on immediate mode GUI touch handling');
+
+const webInputPlugin = readFileSync(new URL('../Plugins/WebGL/MonsterClashInput.jslib', sourceRoot), 'utf8');
+assert.ok(webInputPlugin.includes('MonsterClashInput_HasPointerDown'), 'Web input plug-in should expose pointer press state');
+assert.ok(webInputPlugin.includes('MonsterClashInput_HasPointerUp'), 'Web input plug-in should expose pointer release state');
+assert.ok(webInputPlugin.includes('setPointerCapture'), 'Web input plug-in should retain drag input outside a card');
 
 const hud = readFileSync(new URL('Runtime/BattleHud.cs', sourceRoot), 'utf8');
 assert.ok(hud.includes('public bool TryGetHandIndex'), 'HUD should expose deterministic mobile card hit testing');
@@ -96,5 +103,6 @@ assert.ok(mobileTemplate.includes('viewport-fit=cover'), 'Mobile template should
 assert.ok(mobileTemplate.includes('touch-action: none'), 'Mobile template should prevent browser gestures from stealing game input');
 assert.ok(mobileTemplate.includes('devicePixelRatio: isMobile ? 1'), 'Mobile template should avoid an oversized Retina framebuffer');
 assert.ok(mobileTemplate.includes('OnWebPointerDown'), 'Mobile template should forward pointer input into Unity');
+assert.ok(mobileTemplate.includes('OnWebPointerUp'), 'Mobile template should forward drag release input into Unity');
 
 console.log(`Monster Clash Unity foundation smoke test passed across ${csharpFiles.length} C# files.`);

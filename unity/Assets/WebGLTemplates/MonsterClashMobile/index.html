@@ -155,19 +155,20 @@
       return Math.round(x) + "," + Math.round(y);
     }
 
-    function forwardPointer(event) {
+    function forwardPointer(event, methodName) {
       if (!unityInstance || event.isPrimary === false || event.button > 0) return;
       event.preventDefault();
       canvas.focus({ preventScroll: true });
       unityInstance.SendMessage(
         "Battle Director",
-        "OnWebPointerDown",
+        methodName,
         toUnityPoint(event.clientX, event.clientY)
       );
     }
 
     if (window.PointerEvent) {
-      canvas.addEventListener("pointerdown", forwardPointer, { passive: false });
+      canvas.addEventListener("pointerdown", event => forwardPointer(event, "OnWebPointerDown"), { passive: false });
+      canvas.addEventListener("pointerup", event => forwardPointer(event, "OnWebPointerUp"), { passive: false });
     } else {
       canvas.addEventListener("touchstart", event => {
         if (!unityInstance || event.touches.length === 0) return;
@@ -176,6 +177,17 @@
         unityInstance.SendMessage(
           "Battle Director",
           "OnWebPointerDown",
+          toUnityPoint(touch.clientX, touch.clientY)
+        );
+      }, { passive: false });
+
+      canvas.addEventListener("touchend", event => {
+        if (!unityInstance || event.changedTouches.length === 0) return;
+        event.preventDefault();
+        const touch = event.changedTouches[0];
+        unityInstance.SendMessage(
+          "Battle Director",
+          "OnWebPointerUp",
           toUnityPoint(touch.clientX, touch.clientY)
         );
       }, { passive: false });
