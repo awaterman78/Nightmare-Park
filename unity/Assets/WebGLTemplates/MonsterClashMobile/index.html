@@ -105,7 +105,7 @@
   <main id="unity-container">
     <canvas id="unity-canvas" tabindex="0" aria-label="Monster Clash game"></canvas>
     <section id="unity-loading" aria-live="polite">
-      <div id="unity-loading-label">OPENING MONSTER CLASH · MOBILE INPUT 5</div>
+      <div id="unity-loading-label">OPENING MONSTER CLASH · NATIVE UI 1</div>
       <div id="unity-progress-track" aria-hidden="true">
         <div id="unity-progress-bar"></div>
       </div>
@@ -124,7 +124,6 @@
     const cacheBust = Date.now().toString();
     const assetUrl = fileName => buildUrl + "/" + fileName + "?v=" + cacheBust;
     const loaderUrl = assetUrl("{{{ LOADER_FILENAME }}}");
-    let unityInstance = null;
 
     const config = {
       dataUrl: assetUrl("{{{ DATA_FILENAME }}}"),
@@ -151,77 +150,6 @@
       loading.style.display = "grid";
     }
 
-    function clamp01(value) {
-      return Math.max(0, Math.min(1, value));
-    }
-
-    function toNormalisedUnityPoint(clientX, clientY) {
-      const rect = canvas.getBoundingClientRect();
-      const x = clamp01((clientX - rect.left) / Math.max(1, rect.width));
-      const y = clamp01((rect.bottom - clientY) / Math.max(1, rect.height));
-      return x.toFixed(6) + "," + y.toFixed(6);
-    }
-
-    function sendPointer(phase, clientX, clientY) {
-      if (!unityInstance) return;
-      unityInstance.SendMessage(
-        "Battle Director",
-        "OnWebPointerEvent",
-        phase + "," + toNormalisedUnityPoint(clientX, clientY)
-      );
-    }
-
-    function handlePointer(event, phase) {
-      if (event.isPrimary === false || (typeof event.button === "number" && event.button > 0)) return;
-      event.preventDefault();
-      canvas.focus({ preventScroll: true });
-
-      if (phase === "down" && canvas.setPointerCapture) {
-        try {
-          canvas.setPointerCapture(event.pointerId);
-        } catch (error) {
-        }
-      }
-
-      sendPointer(phase, event.clientX, event.clientY);
-    }
-
-    const inputListenerOptions = { passive: false, capture: true };
-
-    if (window.PointerEvent) {
-      canvas.addEventListener("pointerdown", event => handlePointer(event, "down"), inputListenerOptions);
-      canvas.addEventListener("pointermove", event => handlePointer(event, "move"), inputListenerOptions);
-      canvas.addEventListener("pointerup", event => handlePointer(event, "up"), inputListenerOptions);
-      canvas.addEventListener("pointercancel", event => handlePointer(event, "cancel"), inputListenerOptions);
-    } else {
-      canvas.addEventListener("touchstart", event => {
-        if (event.touches.length === 0) return;
-        event.preventDefault();
-        const touch = event.touches[0];
-        sendPointer("down", touch.clientX, touch.clientY);
-      }, inputListenerOptions);
-
-      canvas.addEventListener("touchmove", event => {
-        if (event.touches.length === 0) return;
-        event.preventDefault();
-        const touch = event.touches[0];
-        sendPointer("move", touch.clientX, touch.clientY);
-      }, inputListenerOptions);
-
-      canvas.addEventListener("touchend", event => {
-        if (event.changedTouches.length === 0) return;
-        event.preventDefault();
-        const touch = event.changedTouches[0];
-        sendPointer("up", touch.clientX, touch.clientY);
-      }, inputListenerOptions);
-
-      canvas.addEventListener("touchcancel", event => {
-        event.preventDefault();
-        const touch = event.changedTouches.length > 0 ? event.changedTouches[0] : null;
-        sendPointer("cancel", touch ? touch.clientX : 0, touch ? touch.clientY : 0);
-      }, inputListenerOptions);
-    }
-
     canvas.addEventListener("contextmenu", event => event.preventDefault());
 
     const loaderScript = document.createElement("script");
@@ -229,8 +157,7 @@
     loaderScript.onload = () => {
       createUnityInstance(canvas, config, progress => {
         progressBar.style.width = Math.round(progress * 100) + "%";
-      }).then(instance => {
-        unityInstance = instance;
+      }).then(() => {
         loading.style.display = "none";
         canvas.focus({ preventScroll: true });
       }).catch(showError);
