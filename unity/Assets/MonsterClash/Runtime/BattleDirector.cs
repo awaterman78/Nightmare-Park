@@ -7,7 +7,7 @@ namespace MonsterClash
 {
     public sealed class BattleDirector : MonoBehaviour
     {
-        public const string BuildLabel = "MOBILE INPUT 5";
+        public const string BuildLabel = "NATIVE UI 1";
 
         private readonly List<DefenceTower> towers = new List<DefenceTower>();
         private readonly List<MonsterCard> deck = new List<MonsterCard>();
@@ -236,6 +236,7 @@ namespace MonsterClash
                 if (tower == null || tower.Team != owner || tower.Health == null) continue;
                 total += tower.Health.Normalised;
             }
+
             return total;
         }
 
