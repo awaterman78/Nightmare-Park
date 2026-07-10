@@ -73,6 +73,8 @@ assert.ok(director.includes('BattleBalance.HandSize'), 'Battle director should u
 assert.ok(director.includes('DoubleEnergyStartsAt'), 'Battle director should implement the final minute energy ramp');
 assert.ok(director.includes('TryDeploySelected'), 'Battle director should expose player deployment');
 assert.ok(director.includes('RunEnemyTurn'), 'Battle director should include an enemy opponent loop');
+assert.ok(director.includes('NATIVE UI 1'), 'The visible build label should identify the native Unity UI build');
+assert.ok(director.includes('arena.ClampDeployment'), 'Player placement should clamp into the legal arena area');
 
 const workflow = readFileSync(new URL('../.github/workflows/unity-webgl-diagnostic-build.yml', import.meta.url), 'utf8');
 assert.ok(workflow.includes('MonsterClash.Editor.MonsterClashBuild.BuildWebGL'), 'Cloud build must invoke the production build entry point');
@@ -85,26 +87,30 @@ assert.ok(buildEntryPoint.includes('GraphicsDeviceType.OpenGLES3'), 'iPhone buil
 assert.ok(buildEntryPoint.includes('PlayerSettings.WebGL.wasm2023 = false'), 'Web builds should retain Safari 15 compatibility');
 
 const input = readFileSync(new URL('Runtime/BattleInputController.cs', sourceRoot), 'utf8');
-assert.ok(input.includes('OnWebPointerEvent'), 'Web builds need one direct browser pointer entry point');
-assert.ok(input.includes('webPointerEvents'), 'Browser pointer events should be queued and processed in order');
-assert.ok(input.includes('WebPointerPhase.Down'), 'Input should process pointer presses');
-assert.ok(input.includes('WebPointerPhase.Move'), 'Input should process pointer movement');
-assert.ok(input.includes('WebPointerPhase.Up'), 'Input should process pointer releases');
-assert.ok(input.includes('WebPointerPhase.Cancel'), 'Input should recover from cancelled touches');
-assert.ok(input.includes('hud.TryGetHandIndex'), 'Card selection should use deterministic HUD hit testing');
-assert.ok(!input.includes('TryHandleGuiPointerFallback'), 'Mobile input must not replay GUI hover as a second touch route');
+assert.ok(input.includes('enabled = false'), 'The retired custom input component should stay disabled');
+assert.ok(!input.includes('OnWebPointerEvent'), 'Input must not depend on browser SendMessage forwarding');
+assert.ok(!input.includes('webPointerEvents'), 'Input must not queue a second browser event stream');
 assert.ok(!input.includes('DllImport'), 'Mobile input must not depend on a WebGL plug-in entry point');
 
 const hud = readFileSync(new URL('Runtime/BattleHud.cs', sourceRoot), 'utf8');
-assert.ok(hud.includes('public bool TryGetHandIndex'), 'HUD should expose deterministic mobile card hit testing');
+assert.ok(hud.includes('CanvasScaler'), 'HUD should use a responsive Unity Canvas');
+assert.ok(hud.includes('GraphicRaycaster'), 'HUD should use Unity UI raycasting');
+assert.ok(hud.includes('StandaloneInputModule'), 'HUD should create Unity native pointer input');
+assert.ok(hud.includes('IPointerClickHandler'), 'Cards and arena should receive native pointer clicks');
+assert.ok(hud.includes('IBeginDragHandler'), 'Cards should support native drag start');
+assert.ok(hud.includes('IEndDragHandler'), 'Cards should support native drag release');
+assert.ok(hud.includes('ArenaPointerSurface'), 'Arena should expose a full native touch surface');
+assert.ok(hud.includes('CardPointerHandler'), 'Each card should own its native pointer handler');
+assert.ok(hud.includes('OnArenaClicked'), 'Arena taps should deploy the selected card');
+assert.ok(hud.includes('OnCardDragEnded'), 'Card drag release should deploy into the arena');
+assert.ok(!hud.includes('OnGUI'), 'The mobile HUD must not use immediate mode GUI input');
 
 const mobileTemplate = readFileSync(new URL('../WebGLTemplates/MonsterClashMobile/index.html', sourceRoot), 'utf8');
 assert.ok(mobileTemplate.includes('viewport-fit=cover'), 'Mobile template should support iPhone safe areas');
-assert.ok(mobileTemplate.includes('touch-action: none'), 'Mobile template should prevent browser gestures from stealing game input');
+assert.ok(mobileTemplate.includes('touch-action: none'), 'Mobile template should prevent browser gestures from stealing Unity input');
 assert.ok(mobileTemplate.includes('devicePixelRatio: isMobile ? 1'), 'Mobile template should avoid an oversized Retina framebuffer');
-assert.ok(mobileTemplate.includes('OnWebPointerEvent'), 'Mobile template should use the single pointer event entry point');
-assert.ok(mobileTemplate.includes('pointermove'), 'Mobile template should forward drag movement');
-assert.ok(mobileTemplate.includes('pointercancel'), 'Mobile template should recover from interrupted touches');
-assert.ok(mobileTemplate.includes('toNormalisedUnityPoint'), 'Pointer positions should be normalised against the visible canvas');
+assert.ok(mobileTemplate.includes('NATIVE UI 1'), 'Loading screen should identify the native Unity UI build');
+assert.ok(!mobileTemplate.includes('OnWebPointerEvent'), 'Template must not forward pointer events through SendMessage');
+assert.ok(!mobileTemplate.includes('pointerdown'), 'Template must leave pointer ownership to Unity');
 
 console.log(`Monster Clash Unity foundation smoke test passed across ${csharpFiles.length} C# files.`);
