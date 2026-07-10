@@ -7,6 +7,8 @@ namespace MonsterClash
 {
     public sealed class BattleDirector : MonoBehaviour
     {
+        public const string BuildLabel = "MOBILE INPUT 5";
+
         private readonly List<DefenceTower> towers = new List<DefenceTower>();
         private readonly List<MonsterCard> deck = new List<MonsterCard>();
 
@@ -48,7 +50,7 @@ namespace MonsterClash
             SelectedHandIndex = -1;
             enemyThinkTimer = 1.35f;
             Phase = BattlePhase.Playing;
-            SetStatus("Pick a monster, then place it anywhere in your half.", 5f);
+            SetStatus(BuildLabel + " READY. Pick a monster, then tap or drag into the arena.", 8f);
         }
 
         public void RegisterTower(DefenceTower tower)
@@ -78,7 +80,7 @@ namespace MonsterClash
             SelectedHandIndex = handIndex;
             SetStatus(
                 playerEnergy.CanSpend(card.EnergyCost)
-                    ? card.DisplayName + " selected. Tap your half to deploy."
+                    ? card.DisplayName + " selected. Tap or drag into the arena."
                     : card.DisplayName + " needs " + card.EnergyCost + " energy.",
                 2.6f);
         }
@@ -91,11 +93,6 @@ namespace MonsterClash
         public bool TryDeploySelected(Vector3 point)
         {
             if (Phase != BattlePhase.Playing || SelectedHandIndex < 0) return false;
-            if (!arena.IsValidDeployment(point, BattleTeam.Player))
-            {
-                SetStatus("You can only deploy in the green half, clear of the river.", 2.2f);
-                return false;
-            }
 
             MonsterCard card = playerCards.CardAt(SelectedHandIndex);
             if (card == null) return false;
@@ -105,10 +102,11 @@ namespace MonsterClash
                 return false;
             }
 
+            Vector3 deploymentPoint = arena.ClampDeployment(point, BattleTeam.Player);
             int playedIndex = SelectedHandIndex;
             SelectedHandIndex = -1;
             playerCards.Play(playedIndex, out MonsterCard playedCard);
-            Spawn(playedCard, BattleTeam.Player, arena.ClampDeployment(point, BattleTeam.Player));
+            Spawn(playedCard, BattleTeam.Player, deploymentPoint);
             SetStatus(playedCard.DisplayName + " joins the nightmare.", 1.6f);
             return true;
         }
