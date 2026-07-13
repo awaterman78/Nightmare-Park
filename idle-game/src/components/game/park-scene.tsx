@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, Text, View } from 'react-native';
 import Svg, {
   Circle,
@@ -11,7 +11,8 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 
-import { REVEAL_POINTS, SCENES } from '@/game/game-data';
+import { formatMoney } from '@/game/economy';
+import { getRevealPoints, SCENES, type ActiveBonusVehicle } from '@/game/game-data';
 
 type ParkSceneProps = {
   sceneIndex: number;
@@ -19,8 +20,10 @@ type ParkSceneProps = {
   tapValue: number;
   tapStreak: number;
   tapMultiplier: number;
+  bonusVehicle: ActiveBonusVehicle | null;
   height: number;
   onTap: () => void;
+  onCollectBonusVehicle: () => void;
 };
 
 function Stars() {
@@ -90,6 +93,26 @@ function DeadmansField({ revealed }: { revealed: boolean[] }) {
         <Rect x="45" y="6" width="6" height="39" fill="#ffcf4a" />
         <Circle cx="25" cy="33" r="8" fill="#70e7ff" />
         <Circle cx="70" cy="33" r="8" fill="#b8ff5c" />
+      </G>
+      <G opacity={revealed[5] ? 1 : 0} transform="translate(288 124)">
+        <Path d="M0 102 V35 L31 3 L62 35 V102Z" fill="#342744" stroke="#171522" strokeWidth="4" />
+        <Path d="M-7 37 L31 -3 L69 37" fill="#8b3a6b" stroke="#b8ff5c" strokeWidth="3" />
+        <Rect x="15" y="50" width="31" height="52" rx="8" fill="#181525" />
+        <Circle cx="31" cy="35" r="10" fill="#b8ff5c" opacity="0.8" />
+        <Path d="M18 74 Q31 62 44 74" stroke="#e9ffb0" strokeWidth="3" fill="none" />
+      </G>
+      <G opacity={revealed[6] ? 1 : 0} transform="translate(195 225)">
+        <Rect x="0" y="12" width="49" height="39" rx="8" fill="#5d3b2c" stroke="#261c29" strokeWidth="3" />
+        <Path d="M-5 14 L24 -4 L54 14Z" fill="#7a285d" stroke="#b8ff5c" strokeWidth="2" />
+        <Circle cx="25" cy="29" r="11" fill="#c6ff72" opacity="0.8" />
+        <Path d="M17 31 Q25 37 33 31" stroke="#2a1c2a" strokeWidth="3" fill="none" />
+        <Path d="M8 51 V62 M41 51 V62" stroke="#2c202a" strokeWidth="4" />
+      </G>
+      <G opacity={revealed[7] ? 1 : 0} transform="translate(312 230)">
+        <Path d="M0 50 V18 L24 0 L49 18 V50Z" fill="#25213b" stroke="#141322" strokeWidth="3" />
+        <Path d="M-4 19 L24 -4 L53 19" fill="#3f3866" stroke="#b8ff5c" strokeWidth="2" />
+        <Rect x="17" y="28" width="14" height="22" rx="3" fill="#0d101c" />
+        <Circle cx="24" cy="20" r="6" fill="#ffcf4a" />
       </G>
     </>
   );
@@ -183,15 +206,21 @@ export function ParkScene({
   tapValue,
   tapStreak,
   tapMultiplier,
+  bonusVehicle,
   height,
   onTap,
+  onCollectBonusVehicle,
 }: ParkSceneProps) {
   const scene = SCENES[sceneIndex];
   const [drift] = useState(() => new Animated.Value(0));
   const [pulse] = useState(() => new Animated.Value(0));
+  const [revealAnimation] = useState(() => new Animated.Value(0));
+  const [revealNotice, setRevealNotice] = useState<number | null>(null);
+  const revealState = useRef<{ sceneIndex: number; count: number } | null>(null);
+  const revealPoints = getRevealPoints(scene);
   const revealed = useMemo(
-    () => REVEAL_POINTS.map((point) => progress >= point),
-    [progress],
+    () => revealPoints.map((point) => progress >= point),
+    [progress, revealPoints],
   );
   const nextRevealIndex = revealed.findIndex((value) => !value);
 
@@ -215,6 +244,25 @@ export function ParkScene({
       pulsing.stop();
     };
   }, [drift, pulse]);
+
+  useEffect(() => {
+    const count = revealed.filter(Boolean).length;
+    const previous = revealState.current;
+    if (!previous || previous.sceneIndex !== sceneIndex) {
+      revealState.current = { sceneIndex, count };
+      return;
+    }
+    if (count <= previous.count) return;
+    revealState.current = { sceneIndex, count };
+    const revealedIndex = count - 1;
+    setRevealNotice(revealedIndex);
+    revealAnimation.setValue(0);
+    Animated.sequence([
+      Animated.timing(revealAnimation, { toValue: 1, duration: 220, useNativeDriver: true }),
+      Animated.delay(1_350),
+      Animated.timing(revealAnimation, { toValue: 0, duration: 320, useNativeDriver: true }),
+    ]).start(() => setRevealNotice(null));
+  }, [revealAnimation, revealed, sceneIndex]);
 
   return (
     <Pressable
@@ -311,6 +359,89 @@ export function ParkScene({
           }}>
           <Text style={{ fontSize: 25 }}>{sceneIndex === 2 ? '🧟' : sceneIndex === 1 ? '🤡' : '🧛'}</Text>
         </Animated.View>
+        {revealNotice !== null && (
+          <Animated.View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: 18,
+              right: 18,
+              top: '20%',
+              alignItems: 'center',
+              opacity: revealAnimation,
+              transform: [
+                { translateY: revealAnimation.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) },
+                { scale: revealAnimation.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) },
+              ],
+            }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: '#090816f2',
+                borderRadius: 99,
+                borderWidth: 1,
+                borderColor: scene.accent,
+                paddingHorizontal: 13,
+                paddingVertical: 8,
+              }}>
+              <Text style={{ fontSize: 17 }}>{scene.upgrades[revealNotice]?.icon ?? '✨'}</Text>
+              <View>
+                <Text style={{ color: scene.accent, fontSize: 9, fontWeight: '900', letterSpacing: 1 }}>
+                  ATTRACTION BUILT
+                </Text>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>
+                  {scene.revealNames[revealNotice]}
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+        )}
+        {bonusVehicle && (
+          <Animated.View
+            style={{
+              position: 'absolute',
+              top: '18%',
+              right: '7%',
+              alignItems: 'flex-end',
+              transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.035] }) }],
+            }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Collect ${bonusVehicle.name}`}
+              onPress={(event) => {
+                event.stopPropagation();
+                onCollectBonusVehicle();
+              }}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 7,
+                backgroundColor: '#090816f5',
+                borderRadius: 17,
+                borderWidth: 2,
+                borderColor: bonusVehicle.accent,
+                paddingHorizontal: 9,
+                paddingVertical: 7,
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+                boxShadow: `0 0 18px ${bonusVehicle.accent}80`,
+              })}>
+              <Text style={{ fontSize: 27 }}>{bonusVehicle.icon}</Text>
+              <View style={{ maxWidth: 122 }}>
+                <Text style={{ color: bonusVehicle.accent, fontSize: 8, fontWeight: '900', letterSpacing: 0.8 }}>
+                  BONUS VEHICLE · {bonusVehicle.timeLeft}s
+                </Text>
+                <Text numberOfLines={1} style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>
+                  {bonusVehicle.name}
+                </Text>
+                <Text style={{ color: '#e7e1ef', fontSize: 10, fontWeight: '800' }}>
+                  COLLECT {formatMoney(bonusVehicle.reward)}
+                </Text>
+              </View>
+            </Pressable>
+          </Animated.View>
+        )}
         <View
           pointerEvents="none"
           style={{
