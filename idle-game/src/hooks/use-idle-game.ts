@@ -119,6 +119,23 @@ export function useIdleGame() {
     });
   }, []);
 
+  const addTestFunds = useCallback((amount: number) => {
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    setState((current) => ({
+      ...current,
+      cash: current.cash + amount,
+      lifetimeCash: current.lifetimeCash + amount,
+    }));
+  }, []);
+
+  const resetGame = useCallback(() => {
+    previousScene.current = 0;
+    setOfflineEarnings(0);
+    setUnlockedScene(null);
+    setState({ ...INITIAL_STATE, lastSeenAt: Date.now() });
+    AsyncStorage.removeItem(STORAGE_KEY).catch(() => undefined);
+  }, []);
+
   return {
     ...state,
     isLoaded,
@@ -129,6 +146,8 @@ export function useIdleGame() {
     unlockedScene,
     tap,
     buyUpgrade,
+    addTestFunds,
+    resetGame,
     dismissOfflineEarnings: () => setOfflineEarnings(0),
     dismissSceneUnlock: () => setUnlockedScene(null),
   };
