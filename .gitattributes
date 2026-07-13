@@ -11,3 +11,6 @@
 *.mp3 filter=lfs diff=lfs merge=lfs -text
 *.mp4 filter=lfs diff=lfs merge=lfs -text
 *.mov filter=lfs diff=lfs merge=lfs -text
+
+# The idle-game web preview bundles this art directly; keep it as a normal PNG.
+idle-game/assets/*.png -filter -diff -merge
