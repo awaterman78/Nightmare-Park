@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getIncomePerSecond, getSceneIndex, getTapValue, getUpgradeCost } from '@/game/economy';
-import { SCENES } from '@/game/game-data';
+import { BONUS_VEHICLES, SCENES, type ActiveBonusVehicle } from '@/game/game-data';
 
 const STORAGE_KEY = 'nightmare-park-save-v1';
 const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
@@ -30,6 +30,7 @@ export function useIdleGame() {
   const streak = useRef({ count: 0, lastTapAt: 0 });
   const streakTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tapStreak, setTapStreak] = useState(0);
+  const [bonusVehicle, setBonusVehicle] = useState<ActiveBonusVehicle | null>(null);
 
   const incomePerSecond = useMemo(() => getIncomePerSecond(state.owned), [state.owned]);
   const tapValue = getTapValue(incomePerSecond);
@@ -100,6 +101,54 @@ export function useIdleGame() {
     };
   }, []);
 
+  const spawnBonusVehicle = useCallback(() => {
+    const definition = BONUS_VEHICLES[Math.floor(Math.random() * BONUS_VEHICLES.length)];
+    const reward = Math.max(
+      50,
+      Math.floor(
+        tapValue * definition.rewardMultiplier +
+          incomePerSecond * 8 +
+          SCENES[sceneIndex].startAt * 0.04,
+      ),
+    );
+    const expiresAt = Date.now() + 8_500;
+    setBonusVehicle({ ...definition, reward, expiresAt, timeLeft: 9 });
+  }, [incomePerSecond, sceneIndex, tapValue]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const firstVehicle = setTimeout(spawnBonusVehicle, 9_000);
+    const recurringVehicles = setInterval(spawnBonusVehicle, 30_000);
+    return () => {
+      clearTimeout(firstVehicle);
+      clearInterval(recurringVehicles);
+    };
+  }, [isLoaded, spawnBonusVehicle]);
+
+  useEffect(() => {
+    if (!bonusVehicle) return;
+    const timer = setInterval(() => {
+      setBonusVehicle((current) => {
+        if (!current) return null;
+        const timeLeft = Math.max(0, Math.ceil((current.expiresAt - Date.now()) / 1000));
+        return timeLeft <= 0 ? null : { ...current, timeLeft };
+      });
+    }, 250);
+    return () => clearInterval(timer);
+  }, [bonusVehicle]);
+
+  const collectBonusVehicle = useCallback(() => {
+    if (!bonusVehicle) return 0;
+    const reward = bonusVehicle.reward;
+    setBonusVehicle(null);
+    setState((current) => ({
+      ...current,
+      cash: current.cash + reward,
+      lifetimeCash: current.lifetimeCash + reward,
+    }));
+    return reward;
+  }, [bonusVehicle]);
+
   const tap = useCallback(() => {
     const now = Date.now();
     const nextStreak = now - streak.current.lastTapAt < 950
@@ -150,6 +199,7 @@ export function useIdleGame() {
     previousScene.current = 0;
     setOfflineEarnings(0);
     setUnlockedScene(null);
+    setBonusVehicle(null);
     setState({ ...INITIAL_STATE, lastSeenAt: Date.now() });
     AsyncStorage.removeItem(STORAGE_KEY).catch(() => undefined);
   }, []);
@@ -161,10 +211,13 @@ export function useIdleGame() {
     tapValue,
     tapStreak,
     tapMultiplier: 1 + Math.floor(tapStreak / 5) * 0.15,
+    bonusVehicle,
     sceneIndex,
     offlineEarnings,
     unlockedScene,
     tap,
+    collectBonusVehicle,
+    spawnBonusVehicle,
     buyUpgrade,
     addTestFunds,
     resetGame,
