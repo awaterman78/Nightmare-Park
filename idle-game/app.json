@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Nightmare Park",
+    "slug": "nightmare-park",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "nightmarepark",
+    "userInterfaceStyle": "dark",
+    "ios": {},
+    "android": {
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
