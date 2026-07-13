@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Animated, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,12 +8,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ParkScene } from '@/components/game/park-scene';
 import { UpgradeCard } from '@/components/game/upgrade-card';
 import { formatMoney, getSceneProgress } from '@/game/economy';
-import { SCENES } from '@/game/game-data';
+import { REVEAL_POINTS, SCENES } from '@/game/game-data';
 import { useIdleGame } from '@/hooks/use-idle-game';
 
 export default function GameScreen() {
   const insets = useSafeAreaInsets();
   const game = useIdleGame();
+  const { test } = useLocalSearchParams<{ test?: string }>();
+  const isTestMode = test === '1';
   const scene = SCENES[game.sceneIndex];
   const progress = getSceneProgress(game.lifetimeCash, game.sceneIndex);
   const [floatingTap, setFloatingTap] = useState(false);
@@ -23,6 +26,14 @@ export default function GameScreen() {
     () => Math.max(0, scene.target - game.lifetimeCash),
     [game.lifetimeCash, scene.target],
   );
+
+  const moneyToNextReveal = useMemo(() => {
+    const nextPoint = REVEAL_POINTS.find((point) => point > progress + 0.001);
+    const target = nextPoint === undefined
+      ? scene.target
+      : scene.startAt + (scene.target - scene.startAt) * nextPoint;
+    return Math.max(1, Math.ceil(target - game.lifetimeCash));
+  }, [game.lifetimeCash, progress, scene.startAt, scene.target]);
 
   useEffect(() => {
     if (!floatingTap) return;
@@ -232,6 +243,47 @@ export default function GameScreen() {
             {scene.strapline}
           </Text>
         </View>
+
+        {isTestMode && (
+          <View
+            style={{
+              backgroundColor: '#24182d',
+              borderWidth: 1,
+              borderColor: '#ff5c8a88',
+              borderRadius: 18,
+              padding: 14,
+              gap: 10,
+            }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <Text style={{ color: '#ff8eae', fontWeight: '900', letterSpacing: 1 }}>
+                TEST MODE
+              </Text>
+              <Text style={{ color: '#9f8390', fontSize: 11 }}>Progress is still saved</Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {[
+                ['NEXT OBJECT', () => game.addTestFunds(moneyToNextReveal)],
+                ['NEXT SCENE', () => game.addTestFunds(Math.max(1, moneyToNextScene))],
+                ['+£100K', () => game.addTestFunds(100_000)],
+                ['RESET', game.resetGame],
+              ].map(([label, action]) => (
+                <Pressable
+                  key={label as string}
+                  onPress={action as () => void}
+                  style={({ pressed }) => ({
+                    backgroundColor: pressed ? '#fff' : '#39263f',
+                    borderRadius: 99,
+                    paddingHorizontal: 13,
+                    paddingVertical: 9,
+                  })}>
+                  <Text style={{ color: '#ffb2c8', fontSize: 11, fontWeight: '900' }}>
+                    {label as string}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
 
         <Pressable
           accessibilityRole="button"
