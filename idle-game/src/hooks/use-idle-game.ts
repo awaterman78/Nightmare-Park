@@ -27,6 +27,9 @@ export function useIdleGame() {
   const [offlineEarnings, setOfflineEarnings] = useState(0);
   const [unlockedScene, setUnlockedScene] = useState<number | null>(null);
   const previousScene = useRef(0);
+  const streak = useRef({ count: 0, lastTapAt: 0 });
+  const streakTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [tapStreak, setTapStreak] = useState(0);
 
   const incomePerSecond = useMemo(() => getIncomePerSecond(state.owned), [state.owned]);
   const tapValue = getTapValue(incomePerSecond);
@@ -91,16 +94,31 @@ export function useIdleGame() {
     previousScene.current = sceneIndex;
   }, [isLoaded, sceneIndex]);
 
-  const tap = useCallback(() => {
-    setState((current) => {
-      const earned = getTapValue(getIncomePerSecond(current.owned));
-      return {
-        ...current,
-        cash: current.cash + earned,
-        lifetimeCash: current.lifetimeCash + earned,
-      };
-    });
+  useEffect(() => {
+    return () => {
+      if (streakTimer.current) clearTimeout(streakTimer.current);
+    };
   }, []);
+
+  const tap = useCallback(() => {
+    const now = Date.now();
+    const nextStreak = now - streak.current.lastTapAt < 950
+      ? Math.min(25, streak.current.count + 1)
+      : 1;
+    const multiplier = 1 + Math.floor(nextStreak / 5) * 0.15;
+    const earned = Math.max(1, Math.round(tapValue * multiplier));
+
+    streak.current = { count: nextStreak, lastTapAt: now };
+    if (streakTimer.current) clearTimeout(streakTimer.current);
+    streakTimer.current = setTimeout(() => setTapStreak(0), 950);
+    setTapStreak(nextStreak);
+    setState((current) => ({
+      ...current,
+      cash: current.cash + earned,
+      lifetimeCash: current.lifetimeCash + earned,
+    }));
+    return earned;
+  }, [tapValue]);
 
   const buyUpgrade = useCallback((upgradeId: string) => {
     const upgrade = SCENES.flatMap((scene) => scene.upgrades).find(
@@ -141,6 +159,8 @@ export function useIdleGame() {
     isLoaded,
     incomePerSecond,
     tapValue,
+    tapStreak,
+    tapMultiplier: 1 + Math.floor(tapStreak / 5) * 0.15,
     sceneIndex,
     offlineEarnings,
     unlockedScene,

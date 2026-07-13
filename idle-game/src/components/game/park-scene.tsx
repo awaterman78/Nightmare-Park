@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { Animated } from 'react-native';
 import { Pressable, Text, View } from 'react-native';
 import Svg, {
   Circle,
@@ -17,6 +18,8 @@ type ParkSceneProps = {
   sceneIndex: number;
   progress: number;
   tapValue: number;
+  tapStreak: number;
+  tapMultiplier: number;
   height: number;
   onTap: () => void;
 };
@@ -175,13 +178,44 @@ function HauntedResort({ revealed }: { revealed: boolean[] }) {
   );
 }
 
-export function ParkScene({ sceneIndex, progress, tapValue, height, onTap }: ParkSceneProps) {
+export function ParkScene({
+  sceneIndex,
+  progress,
+  tapValue,
+  tapStreak,
+  tapMultiplier,
+  height,
+  onTap,
+}: ParkSceneProps) {
   const scene = SCENES[sceneIndex];
+  const drift = useRef(new Animated.Value(0)).current;
+  const pulse = useRef(new Animated.Value(0)).current;
   const revealed = useMemo(
     () => REVEAL_POINTS.map((point) => progress >= point),
     [progress],
   );
   const nextRevealIndex = revealed.findIndex((value) => !value);
+
+  useEffect(() => {
+    const drifting = Animated.loop(
+      Animated.sequence([
+        Animated.timing(drift, { toValue: 1, duration: 2800, useNativeDriver: true }),
+        Animated.timing(drift, { toValue: 0, duration: 2800, useNativeDriver: true }),
+      ]),
+    );
+    const pulsing = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ]),
+    );
+    drifting.start();
+    pulsing.start();
+    return () => {
+      drifting.stop();
+      pulsing.stop();
+    };
+  }, [drift, pulse]);
 
   return (
     <Pressable
@@ -250,6 +284,34 @@ export function ParkScene({ sceneIndex, progress, tapValue, height, onTap }: Par
             </Text>
           </View>
         </View>
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: '10%',
+            bottom: '19%',
+            opacity: drift.interpolate({ inputRange: [0, 1], outputRange: [0.42, 0.92] }),
+            transform: [
+              { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-8, 15] }) },
+              { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [5, -6] }) },
+            ],
+          }}>
+          <Text style={{ fontSize: 27 }}>👻</Text>
+        </Animated.View>
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            right: '11%',
+            bottom: '18%',
+            opacity: drift.interpolate({ inputRange: [0, 1], outputRange: [0.9, 0.45] }),
+            transform: [
+              { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [10, -10] }) },
+              { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [-2, 7] }) },
+            ],
+          }}>
+          <Text style={{ fontSize: 25 }}>{sceneIndex === 2 ? '🧟' : sceneIndex === 1 ? '🤡' : '🧛'}</Text>
+        </Animated.View>
         <View
           pointerEvents="none"
           style={{
@@ -259,7 +321,7 @@ export function ParkScene({ sceneIndex, progress, tapValue, height, onTap }: Par
             top: '31%',
             alignItems: 'center',
           }}>
-          <View
+          <Animated.View
             style={{
               width: 128,
               height: 128,
@@ -270,6 +332,14 @@ export function ParkScene({ sceneIndex, progress, tapValue, height, onTap }: Par
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: `0 0 36px ${scene.accent}99`,
+              transform: [
+                {
+                  scale: pulse.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.055],
+                  }),
+                },
+              ],
             }}>
             <Text style={{ fontSize: 43 }}>👻</Text>
             <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>
@@ -278,7 +348,23 @@ export function ParkScene({ sceneIndex, progress, tapValue, height, onTap }: Par
             <Text style={{ color: scene.accent, fontSize: 16, fontWeight: '900' }}>
               +£{tapValue.toLocaleString('en-GB')}
             </Text>
-          </View>
+          </Animated.View>
+          {tapStreak >= 5 && (
+            <View
+              style={{
+                marginTop: 10,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 99,
+                backgroundColor: '#130d1fd9',
+                borderWidth: 1,
+                borderColor: scene.accent,
+              }}>
+              <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900', letterSpacing: 0.7 }}>
+                SCREAM STREAK ×{tapMultiplier.toFixed(2)}
+              </Text>
+            </View>
+          )}
         </View>
         <View
           pointerEvents="none"
