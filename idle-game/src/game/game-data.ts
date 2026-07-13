@@ -18,6 +18,22 @@ export type SceneDefinition = {
   skyBottom: string;
   upgrades: Upgrade[];
   revealNames: string[];
+  revealPoints?: number[];
+};
+
+export type BonusVehicleDefinition = {
+  id: string;
+  name: string;
+  icon: string;
+  tagline: string;
+  rewardMultiplier: number;
+  accent: string;
+};
+
+export type ActiveBonusVehicle = BonusVehicleDefinition & {
+  reward: number;
+  expiresAt: number;
+  timeLeft: number;
 };
 
 export const SCENES: SceneDefinition[] = [
@@ -30,7 +46,17 @@ export const SCENES: SceneDefinition[] = [
     accent: '#b8ff5c',
     skyTop: '#17112d',
     skyBottom: '#45245e',
-    revealNames: ['Crooked gate', 'Ticket shack', 'Grave Goblin', 'Ghost train', 'Cursed carousel'],
+    revealNames: [
+      'Crooked gate',
+      'Ticket shack',
+      'Grave Goblin',
+      'Ghost train',
+      'Cursed carousel',
+      'Moonlit funhouse',
+      'Witch kitchen',
+      'Crypt arcade',
+    ],
+    revealPoints: [0, 0.1, 0.22, 0.36, 0.52, 0.68, 0.82, 0.94],
     upgrades: [
       {
         id: 'handcart',
@@ -63,6 +89,38 @@ export const SCENES: SceneDefinition[] = [
         icon: '🚂',
         baseCost: 3_500,
         income: 120,
+      },
+      {
+        id: 'cursed-carousel',
+        name: 'Cursed Carousel',
+        description: 'It spins by itself. The horses know your name.',
+        icon: '🎠',
+        baseCost: 5_000,
+        income: 260,
+      },
+      {
+        id: 'moonlit-funhouse',
+        name: 'Moonlit Funhouse',
+        description: 'Every mirror shows a slightly worse version of you.',
+        icon: '🪞',
+        baseCost: 8_500,
+        income: 460,
+      },
+      {
+        id: 'witch-kitchen',
+        name: "Witch's Kitchen",
+        description: 'The pies are delicious. The ingredients are classified.',
+        icon: '🍲',
+        baseCost: 13_000,
+        income: 760,
+      },
+      {
+        id: 'crypt-arcade',
+        name: 'Crypt Arcade',
+        description: 'Win tickets. Lose memories. Repeat until closing.',
+        icon: '🕹️',
+        baseCost: 20_000,
+        income: 1_250,
       },
     ],
   },
@@ -159,3 +217,34 @@ export const SCENES: SceneDefinition[] = [
 ];
 
 export const REVEAL_POINTS = [0, 0.14, 0.34, 0.6, 0.84];
+
+export function getRevealPoints(scene: SceneDefinition) {
+  return scene.revealPoints ?? REVEAL_POINTS;
+}
+
+export const BONUS_VEHICLES: BonusVehicleDefinition[] = [
+  {
+    id: 'grave-coach',
+    name: 'Grave Coach',
+    icon: '🚌',
+    tagline: 'A bus full of late-night screamers.',
+    rewardMultiplier: 10,
+    accent: '#b8ff5c',
+  },
+  {
+    id: 'scream-limo',
+    name: 'Scream Limo',
+    icon: '🚘',
+    tagline: 'Luxury transport for people with no survival instinct.',
+    rewardMultiplier: 14,
+    accent: '#ffcf4a',
+  },
+  {
+    id: 'phantom-tram',
+    name: 'Phantom Tram',
+    icon: '🚋',
+    tagline: 'It arrives on time. It leaves with your shadow.',
+    rewardMultiplier: 18,
+    accent: '#69e7ff',
+  },
+];
