@@ -1,0 +1,64 @@
+name: Deploy Nightmare Park Idle Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/nightmare-park-idle-restart
+    paths:
+      - 'idle-game/**'
+      - '.github/workflows/deploy-idle-preview.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout preview branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: idle-game/package-lock.json
+
+      - name: Install dependencies
+        working-directory: idle-game
+        run: npm ci
+
+      - name: Validate game
+        working-directory: idle-game
+        run: |
+          npm run lint
+          npx tsc --noEmit
+
+      - name: Build browser game
+        working-directory: idle-game
+        run: npx expo export --platform web
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload browser game
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: idle-game/dist
+
+      - name: Deploy browser game
+        id: deployment
+        uses: actions/deploy-pages@v4
