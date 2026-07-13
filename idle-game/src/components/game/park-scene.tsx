@@ -16,6 +16,8 @@ import { REVEAL_POINTS, SCENES } from '@/game/game-data';
 type ParkSceneProps = {
   sceneIndex: number;
   progress: number;
+  tapValue: number;
+  height: number;
   onTap: () => void;
 };
 
@@ -29,6 +31,15 @@ function Stars() {
       <Circle cx="239" cy="29" r="1.7" />
       <Circle cx="298" cy="61" r="1.2" />
       <Circle cx="348" cy="37" r="1.5" />
+    </G>
+  );
+}
+
+function Fog() {
+  return (
+    <G opacity={0.23} fill="#d9e9ff">
+      <Path d="M-18 215 Q20 192 62 213 T142 210 T224 216 T310 207 T410 214 V245 H-18Z" />
+      <Path d="M-12 242 Q36 222 91 243 T199 235 T300 246 T410 235 V274 H-12Z" opacity={0.55} />
     </G>
   );
 }
@@ -164,7 +175,7 @@ function HauntedResort({ revealed }: { revealed: boolean[] }) {
   );
 }
 
-export function ParkScene({ sceneIndex, progress, onTap }: ParkSceneProps) {
+export function ParkScene({ sceneIndex, progress, tapValue, height, onTap }: ParkSceneProps) {
   const scene = SCENES[sceneIndex];
   const revealed = useMemo(
     () => REVEAL_POINTS.map((point) => progress >= point),
@@ -177,16 +188,22 @@ export function ParkScene({ sceneIndex, progress, onTap }: ParkSceneProps) {
       accessibilityRole="button"
       accessibilityLabel="Tap the park to earn fear funds"
       onPress={onTap}
-      style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.99 : 1 }] })}>
+      style={({ pressed }) => ({
+        flex: 1,
+        minHeight: height,
+        transform: [{ scale: pressed ? 0.992 : 1 }],
+      })}>
       <View
         style={{
+          flex: 1,
+          minHeight: height,
           borderRadius: 28,
           overflow: 'hidden',
           borderWidth: 2,
           borderColor: `${scene.accent}70`,
           boxShadow: '0 14px 36px rgba(0,0,0,0.4)',
         }}>
-        <Svg width="100%" height={300} viewBox="0 0 390 300">
+        <Svg width="100%" height="100%" viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice">
           <Defs>
             <LinearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={scene.skyTop} />
@@ -198,6 +215,7 @@ export function ParkScene({ sceneIndex, progress, onTap }: ParkSceneProps) {
           {sceneIndex === 0 && <DeadmansField revealed={revealed} />}
           {sceneIndex === 1 && <CursedCarnival revealed={revealed} />}
           {sceneIndex === 2 && <HauntedResort revealed={revealed} />}
+          <Fog />
         </Svg>
         <View
           pointerEvents="none"
@@ -205,25 +223,85 @@ export function ParkScene({ sceneIndex, progress, onTap }: ParkSceneProps) {
             position: 'absolute',
             left: 14,
             right: 14,
-            bottom: 12,
+            top: 14,
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}>
           <View
             style={{
-              backgroundColor: '#0b0a18cc',
-              paddingHorizontal: 12,
-              paddingVertical: 7,
+              backgroundColor: '#090816c7',
+              borderWidth: 1,
+              borderColor: `${scene.accent}80`,
+              paddingHorizontal: 11,
+              paddingVertical: 6,
               borderRadius: 99,
             }}>
-            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>TAP THE PARK</Text>
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>
+              LOCATION {sceneIndex + 1}
+            </Text>
           </View>
-          <Text style={{ color: scene.accent, fontSize: 12, fontWeight: '800' }}>
-            {nextRevealIndex === -1
-              ? 'SCENE COMPLETE'
-              : `NEXT: ${scene.revealNames[nextRevealIndex]}`}
-          </Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>
+              {revealed.filter(Boolean).length}/{scene.revealNames.length} BUILT
+            </Text>
+            <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '800' }}>
+              {nextRevealIndex === -1 ? 'PARK MAXED' : scene.revealNames[nextRevealIndex]}
+            </Text>
+          </View>
+        </View>
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: '31%',
+            alignItems: 'center',
+          }}>
+          <View
+            style={{
+              width: 128,
+              height: 128,
+              borderRadius: 64,
+              backgroundColor: '#090816d9',
+              borderWidth: 3,
+              borderColor: `${scene.accent}cc`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: `0 0 36px ${scene.accent}99`,
+            }}>
+            <Text style={{ fontSize: 43 }}>👻</Text>
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>
+              SCARE
+            </Text>
+            <Text style={{ color: scene.accent, fontSize: 16, fontWeight: '900' }}>
+              +£{tapValue.toLocaleString('en-GB')}
+            </Text>
+          </View>
+        </View>
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: 14,
+            right: 14,
+            bottom: 13,
+            alignItems: 'center',
+          }}>
+          <View
+            style={{
+              backgroundColor: '#090816c7',
+              borderRadius: 99,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderWidth: 1,
+              borderColor: '#ffffff20',
+            }}>
+            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 0.6 }}>
+              TAP ANYWHERE TO COLLECT SCREAMS
+            </Text>
+          </View>
         </View>
       </View>
     </Pressable>
