@@ -13,41 +13,62 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ParkScene } from '@/components/game/park-scene';
+import { PremiumParkScene } from '@/components/game/premium-park-scene';
+import { ParkScene as LegacyParkScene } from '@/components/game/park-scene';
 import { formatMoney, getSceneProgress, getUpgradeCost } from '@/game/economy';
 import { getRevealPoints, SCENES, type Upgrade } from '@/game/game-data';
 import { useIdleGame } from '@/hooks/use-idle-game';
 
 type BuildChipProps = {
   upgrade: Upgrade;
+  index: number;
   owned: number;
   selected: boolean;
   accent: string;
   onPress: () => void;
 };
 
-function BuildChip({ upgrade, owned, selected, accent, onPress }: BuildChipProps) {
+function BuildChip({ upgrade, index, owned, selected, accent, onPress }: BuildChipProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Select ${upgrade.name}`}
       onPress={onPress}
       style={({ pressed }) => ({
-        width: 68,
-        minHeight: 70,
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 2,
-        borderRadius: 16,
+        width: 104,
+        minHeight: 78,
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: 7,
+        borderRadius: 15,
+        paddingHorizontal: 10,
+        paddingVertical: 10,
         backgroundColor: selected ? `${accent}2b` : '#12101f',
         borderWidth: selected ? 2 : 1,
         borderColor: selected ? accent : '#ffffff1a',
         transform: [{ scale: pressed ? 0.94 : 1 }],
       })}>
-      <Text style={{ fontSize: 25 }}>{upgrade.icon}</Text>
+      <View
+        style={{
+          width: 23,
+          height: 23,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 7,
+          backgroundColor: selected ? accent : '#ffffff16',
+        }}>
+        <Text style={{ color: selected ? '#12101f' : '#b7afc3', fontSize: 9, fontWeight: '900' }}>
+          {String(index + 1).padStart(2, '0')}
+        </Text>
+      </View>
+      <Text
+        numberOfLines={2}
+        style={{ color: selected ? '#fff' : '#d5cedf', fontSize: 10, fontWeight: '900', lineHeight: 12 }}>
+        {upgrade.name.toUpperCase()}
+      </Text>
       <Text
         numberOfLines={1}
-        style={{ color: selected ? '#fff' : '#8d879e', fontSize: 8, fontWeight: '900' }}>
+        style={{ color: selected ? accent : '#8d879e', fontSize: 8, fontWeight: '900', letterSpacing: 0.7 }}>
         {owned > 0 ? `LV ${owned}` : 'BUILD'}
       </Text>
     </Pressable>
@@ -76,6 +97,7 @@ export default function GameScreen() {
     scene.upgrades.find((upgrade) => upgrade.id === selectedUpgradeId) ?? scene.upgrades[0];
   const selectedOwned = game.owned[selectedUpgrade.id] ?? 0;
   const selectedCost = getUpgradeCost(selectedUpgrade, selectedOwned);
+  const selectedUpgradeIndex = Math.max(0, scene.upgrades.findIndex((upgrade) => upgrade.id === selectedUpgrade.id));
   const canBuySelected = game.cash >= selectedCost;
   const moneyToNextScene = Math.max(0, scene.target - game.lifetimeCash);
 
@@ -162,7 +184,19 @@ export default function GameScreen() {
               paddingVertical: 7,
               borderRadius: 99,
             }}>
-            <Text style={{ fontSize: 14 }}>🗺️</Text>
+            <View
+              style={{
+                width: 18,
+                height: 18,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 6,
+                backgroundColor: scene.accent,
+              }}>
+              <Text style={{ color: '#120d19', fontSize: 8, fontWeight: '900' }}>
+                {String(game.sceneIndex + 1).padStart(2, '0')}
+              </Text>
+            </View>
             <Text style={{ color: '#d9d4e5', fontSize: 10, fontWeight: '900' }}>
               {scene.name}
             </Text>
@@ -235,17 +269,31 @@ export default function GameScreen() {
         </View>
 
         <View style={{ minHeight: parkHeight }}>
-          <ParkScene
-            sceneIndex={game.sceneIndex}
-            progress={progress}
-            tapValue={game.tapValue}
-            tapStreak={game.tapStreak}
-            tapMultiplier={game.tapMultiplier}
-            bonusVehicle={game.bonusVehicle}
-            height={parkHeight}
-            onTap={handleTap}
-            onCollectBonusVehicle={handleCollectBonusVehicle}
-          />
+          {game.sceneIndex === 0 ? (
+            <PremiumParkScene
+              sceneIndex={game.sceneIndex}
+              progress={progress}
+              tapValue={game.tapValue}
+              tapStreak={game.tapStreak}
+              tapMultiplier={game.tapMultiplier}
+              bonusVehicle={game.bonusVehicle}
+              height={parkHeight}
+              onTap={handleTap}
+              onCollectBonusVehicle={handleCollectBonusVehicle}
+            />
+          ) : (
+            <LegacyParkScene
+              sceneIndex={game.sceneIndex}
+              progress={progress}
+              tapValue={game.tapValue}
+              tapStreak={game.tapStreak}
+              tapMultiplier={game.tapMultiplier}
+              bonusVehicle={game.bonusVehicle}
+              height={parkHeight}
+              onTap={handleTap}
+              onCollectBonusVehicle={handleCollectBonusVehicle}
+            />
+          )}
           {floatingTap && (
             <Animated.View
               pointerEvents="none"
@@ -304,7 +352,19 @@ export default function GameScreen() {
                   paddingHorizontal: 13,
                   paddingVertical: 8,
                 }}>
-                <Text style={{ fontSize: 16 }}>{selectedUpgrade.icon}</Text>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 7,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: scene.accent,
+                  }}>
+                  <Text style={{ color: '#130f1c', fontSize: 9, fontWeight: '900' }}>
+                    {String(selectedUpgradeIndex + 1).padStart(2, '0')}
+                  </Text>
+                </View>
                 <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>
                   {selectedUpgrade.name} upgraded
                 </Text>
@@ -328,17 +388,18 @@ export default function GameScreen() {
           }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>Build your nightmare</Text>
-              <Text style={{ color: '#827a92', fontSize: 10 }}>Pick an attraction, then add it to the park.</Text>
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>Shape the field</Text>
+              <Text style={{ color: '#827a92', fontSize: 10 }}>Every build changes what visitors see.</Text>
             </View>
             <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900' }}>SCENE {game.sceneIndex + 1}</Text>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {scene.upgrades.map((upgrade) => (
+            {scene.upgrades.map((upgrade, index) => (
               <BuildChip
                 key={upgrade.id}
                 upgrade={upgrade}
+                index={index}
                 owned={game.owned[upgrade.id] ?? 0}
                 selected={selectedUpgrade.id === upgrade.id}
                 accent={scene.accent}
@@ -357,7 +418,9 @@ export default function GameScreen() {
                 borderRadius: 14,
                 backgroundColor: `${scene.accent}1c`,
               }}>
-              <Text style={{ fontSize: 25 }}>{selectedUpgrade.icon}</Text>
+              <Text style={{ color: scene.accent, fontSize: 12, fontWeight: '900' }}>
+                {String(selectedUpgradeIndex + 1).padStart(2, '0')}
+              </Text>
             </View>
             <View style={{ flex: 1, gap: 1 }}>
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
@@ -407,7 +470,19 @@ export default function GameScreen() {
               borderRadius: 16,
               padding: 11,
             }}>
-            <Text style={{ fontSize: 23 }}>🌙</Text>
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 10,
+                backgroundColor: `${scene.accent}22`,
+                borderWidth: 1,
+                borderColor: `${scene.accent}66`,
+              }}>
+              <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900' }}>AFK</Text>
+            </View>
             <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800', flex: 1 }}>
               The park earned {formatMoney(game.offlineEarnings)} while you were away.
             </Text>
@@ -460,7 +535,21 @@ export default function GameScreen() {
               borderWidth: 2,
               borderColor: scene.accent,
             }}>
-            <Text style={{ fontSize: 52 }}>🔓</Text>
+            <View
+              style={{
+                width: 58,
+                height: 58,
+                borderRadius: 20,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: `${scene.accent}20`,
+                borderWidth: 1,
+                borderColor: `${scene.accent}99`,
+              }}>
+              <Text style={{ color: scene.accent, fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>
+                OPEN
+              </Text>
+            </View>
             <Text style={{ color: scene.accent, fontSize: 11, fontWeight: '900', letterSpacing: 2 }}>
               NEW LOCATION
             </Text>
