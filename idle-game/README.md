@@ -6,6 +6,8 @@ A portrait idle game built around an evolving horror empire. Each location fills
 
 The first playable build includes three locations, milestone based scene reveals, tapping, purchasable attractions, passive income, offline earnings and automatic location transitions.
 
+The first chapter now uses the illustrated Deadman’s Field presentation, with a single-screen park view and a numbered build dock.
+
 ## Run it
 
 ```bash
