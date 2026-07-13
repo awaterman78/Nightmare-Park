@@ -4,7 +4,7 @@ import { Animated, ImageBackground, Pressable, Text, View } from 'react-native';
 import { formatMoney } from '@/game/economy';
 import { getRevealPoints, SCENES, type ActiveBonusVehicle } from '@/game/game-data';
 
-const DEADMAN_ART = require('../../../assets/deadmans-field-v2.png');
+const DEADMAN_ART = require('../../../assets/deadmans-field-v2.jpg');
 
 type PremiumParkSceneProps = {
   sceneIndex: number;

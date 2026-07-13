@@ -14,3 +14,4 @@
 
 # The idle-game web preview bundles this art directly; keep it as a normal PNG.
 idle-game/assets/*.png -filter -diff -merge
+idle-game/assets/*.jpg -filter -diff -merge
