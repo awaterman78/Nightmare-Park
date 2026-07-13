@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ParkScene } from '@/components/game/park-scene';
 import { formatMoney, getSceneProgress, getUpgradeCost } from '@/game/economy';
-import { REVEAL_POINTS, SCENES, type Upgrade } from '@/game/game-data';
+import { getRevealPoints, SCENES, type Upgrade } from '@/game/game-data';
 import { useIdleGame } from '@/hooks/use-idle-game';
 
 type BuildChipProps = {
@@ -70,6 +70,7 @@ export default function GameScreen() {
   const [buildAnimation] = useState(() => new Animated.Value(0));
   const nextScene = SCENES[game.sceneIndex + 1];
   const parkHeight = Math.max(290, Math.min(440, screenHeight * 0.43));
+  const revealPoints = getRevealPoints(scene);
 
   const selectedUpgrade =
     scene.upgrades.find((upgrade) => upgrade.id === selectedUpgradeId) ?? scene.upgrades[0];
@@ -79,13 +80,13 @@ export default function GameScreen() {
   const moneyToNextScene = Math.max(0, scene.target - game.lifetimeCash);
 
   const moneyToNextReveal = useMemo(() => {
-    const nextPoint = REVEAL_POINTS.find((point) => point > progress + 0.001);
+    const nextPoint = revealPoints.find((point) => point > progress + 0.001);
     const target =
       nextPoint === undefined
         ? scene.target
         : scene.startAt + (scene.target - scene.startAt) * nextPoint;
     return Math.max(1, Math.ceil(target - game.lifetimeCash));
-  }, [game.lifetimeCash, progress, scene.startAt, scene.target]);
+  }, [game.lifetimeCash, progress, revealPoints, scene.startAt, scene.target]);
 
   useEffect(() => {
     if (!floatingTap) return;
@@ -101,6 +102,14 @@ export default function GameScreen() {
     setLastTapEarned(game.tap());
     setFloatingTap(true);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleCollectBonusVehicle = () => {
+    const reward = game.collectBonusVehicle();
+    if (reward <= 0) return;
+    setLastTapEarned(reward);
+    setFloatingTap(true);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const handleBuy = () => {
@@ -232,8 +241,10 @@ export default function GameScreen() {
             tapValue={game.tapValue}
             tapStreak={game.tapStreak}
             tapMultiplier={game.tapMultiplier}
+            bonusVehicle={game.bonusVehicle}
             height={parkHeight}
             onTap={handleTap}
+            onCollectBonusVehicle={handleCollectBonusVehicle}
           />
           {floatingTap && (
             <Animated.View
@@ -410,6 +421,7 @@ export default function GameScreen() {
               ['NEXT OBJECT', () => game.addTestFunds(moneyToNextReveal)],
               ['NEXT SCENE', () => game.addTestFunds(Math.max(1, moneyToNextScene))],
               ['+£100K', () => game.addTestFunds(100_000)],
+              ['BONUS VAN', game.spawnBonusVehicle],
               ['RESET', game.resetGame],
             ].map(([label, action]) => (
               <Pressable
