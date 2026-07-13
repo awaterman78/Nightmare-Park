@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - agent/nightmare-park-idle-restart
     paths:
       - 'idle-game/**'
