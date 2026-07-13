@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { Animated } from 'react-native';
-import { Pressable, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Animated, Pressable, Text, View } from 'react-native';
 import Svg, {
   Circle,
   Defs,
@@ -188,8 +187,8 @@ export function ParkScene({
   onTap,
 }: ParkSceneProps) {
   const scene = SCENES[sceneIndex];
-  const drift = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
+  const [drift] = useState(() => new Animated.Value(0));
+  const [pulse] = useState(() => new Animated.Value(0));
   const revealed = useMemo(
     () => REVEAL_POINTS.map((point) => progress >= point),
     [progress],
