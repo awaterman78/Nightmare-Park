@@ -64,7 +64,10 @@ export default function GameScreen() {
   const progress = getSceneProgress(game.lifetimeCash, game.sceneIndex);
   const [selectedUpgradeId, setSelectedUpgradeId] = useState(scene.upgrades[0].id);
   const [floatingTap, setFloatingTap] = useState(false);
+  const [lastTapEarned, setLastTapEarned] = useState(game.tapValue);
+  const [buildFlash, setBuildFlash] = useState(false);
   const [tapAnimation] = useState(() => new Animated.Value(0));
+  const [buildAnimation] = useState(() => new Animated.Value(0));
   const nextScene = SCENES[game.sceneIndex + 1];
   const parkHeight = Math.max(290, Math.min(440, screenHeight * 0.43));
 
@@ -95,7 +98,7 @@ export default function GameScreen() {
   }, [floatingTap, tapAnimation]);
 
   const handleTap = () => {
-    game.tap();
+    setLastTapEarned(game.tap());
     setFloatingTap(true);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
@@ -103,6 +106,13 @@ export default function GameScreen() {
   const handleBuy = () => {
     if (!canBuySelected) return;
     game.buyUpgrade(selectedUpgrade.id);
+    setBuildFlash(true);
+    buildAnimation.setValue(0);
+    Animated.sequence([
+      Animated.timing(buildAnimation, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.delay(720),
+      Animated.timing(buildAnimation, { toValue: 0, duration: 260, useNativeDriver: true }),
+    ]).start(() => setBuildFlash(false));
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -220,6 +230,8 @@ export default function GameScreen() {
             sceneIndex={game.sceneIndex}
             progress={progress}
             tapValue={game.tapValue}
+            tapStreak={game.tapStreak}
+            tapMultiplier={game.tapMultiplier}
             height={parkHeight}
             onTap={handleTap}
           />
@@ -246,8 +258,49 @@ export default function GameScreen() {
                   textShadowColor: '#000',
                   textShadowRadius: 10,
                 }}>
-                +{formatMoney(game.tapValue)}
+                +{formatMoney(lastTapEarned)}
               </Text>
+            </Animated.View>
+          )}
+          {buildFlash && (
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: 18,
+                right: 18,
+                bottom: 21,
+                alignItems: 'center',
+                opacity: buildAnimation,
+                transform: [
+                  {
+                    translateY: buildAnimation.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }),
+                  },
+                  {
+                    scale: buildAnimation.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }),
+                  },
+                ],
+              }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 7,
+                  backgroundColor: '#0b0916e8',
+                  borderRadius: 99,
+                  borderWidth: 1,
+                  borderColor: scene.accent,
+                  paddingHorizontal: 13,
+                  paddingVertical: 8,
+                }}>
+                <Text style={{ fontSize: 16 }}>{selectedUpgrade.icon}</Text>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>
+                  {selectedUpgrade.name} upgraded
+                </Text>
+                <Text style={{ color: scene.accent, fontSize: 11, fontWeight: '900' }}>
+                  +{formatMoney(selectedUpgrade.income)}/s
+                </Text>
+              </View>
             </Animated.View>
           )}
         </View>
