@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getIncomePerSecond, getSceneIndex, getTapValue, getUpgradeCost } from '@/game/economy';
 import { BONUS_VEHICLES, SCENES, type ActiveBonusVehicle } from '@/game/game-data';
 
-const STORAGE_KEY = 'nightmare-park-save-v1';
+// Visual reset: start existing browsers on the new Deadman’s Field chapter.
+const STORAGE_KEY = 'nightmare-park-save-v2';
 const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
 
 type GameState = {
