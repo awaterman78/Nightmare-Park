@@ -12,7 +12,7 @@ export function getIncomePerSecond(owned: Record<string, number>) {
 }
 
 export function getTapValue(incomePerSecond: number) {
-  return Math.max(1, Math.floor(1 + incomePerSecond * 0.08));
+  return Math.max(5, Math.floor(5 + incomePerSecond * 0.12));
 }
 
 export function getSceneIndex(lifetimeCash: number) {

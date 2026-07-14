@@ -14,7 +14,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PremiumParkScene } from '@/components/game/premium-park-scene';
-import { ParkScene as LegacyParkScene } from '@/components/game/park-scene';
 import { formatMoney, getSceneProgress, getUpgradeCost } from '@/game/economy';
 import { getRevealPoints, SCENES, type Upgrade } from '@/game/game-data';
 import { useIdleGame } from '@/hooks/use-idle-game';
@@ -90,7 +89,7 @@ export default function GameScreen() {
   const [tapAnimation] = useState(() => new Animated.Value(0));
   const [buildAnimation] = useState(() => new Animated.Value(0));
   const nextScene = SCENES[game.sceneIndex + 1];
-  const parkHeight = Math.max(290, Math.min(440, screenHeight * 0.43));
+  const parkHeight = Math.max(330, Math.min(470, screenHeight * 0.46));
   const revealPoints = getRevealPoints(scene);
 
   const selectedUpgrade =
@@ -269,31 +268,19 @@ export default function GameScreen() {
         </View>
 
         <View style={{ minHeight: parkHeight }}>
-          {game.sceneIndex === 0 ? (
-            <PremiumParkScene
-              sceneIndex={game.sceneIndex}
-              progress={progress}
-              tapValue={game.tapValue}
-              tapStreak={game.tapStreak}
-              tapMultiplier={game.tapMultiplier}
-              bonusVehicle={game.bonusVehicle}
-              height={parkHeight}
-              onTap={handleTap}
-              onCollectBonusVehicle={handleCollectBonusVehicle}
-            />
-          ) : (
-            <LegacyParkScene
-              sceneIndex={game.sceneIndex}
-              progress={progress}
-              tapValue={game.tapValue}
-              tapStreak={game.tapStreak}
-              tapMultiplier={game.tapMultiplier}
-              bonusVehicle={game.bonusVehicle}
-              height={parkHeight}
-              onTap={handleTap}
-              onCollectBonusVehicle={handleCollectBonusVehicle}
-            />
-          )}
+          <PremiumParkScene
+            sceneIndex={game.sceneIndex}
+            progress={progress}
+            lifetimeCash={game.lifetimeCash}
+            moneyToNextReveal={moneyToNextReveal}
+            tapValue={game.tapValue}
+            tapStreak={game.tapStreak}
+            tapMultiplier={game.tapMultiplier}
+            bonusVehicle={game.bonusVehicle}
+            height={parkHeight}
+            onTap={handleTap}
+            onCollectBonusVehicle={handleCollectBonusVehicle}
+          />
           {floatingTap && (
             <Animated.View
               pointerEvents="none"
@@ -388,8 +375,8 @@ export default function GameScreen() {
           }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>Shape the field</Text>
-              <Text style={{ color: '#827a92', fontSize: 10 }}>Every build changes what visitors see.</Text>
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>Build {scene.name}</Text>
+              <Text style={{ color: '#827a92', fontSize: 10 }}>Earn, construct, and watch the whole location evolve.</Text>
             </View>
             <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900' }}>SCENE {game.sceneIndex + 1}</Text>
           </View>
