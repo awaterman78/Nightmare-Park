@@ -2,15 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import {
-  Animated,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { Animated, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PremiumParkScene } from '@/components/game/premium-park-scene';
@@ -18,7 +10,7 @@ import { formatMoney, getSceneProgress, getUpgradeCost } from '@/game/economy';
 import { getRevealPoints, SCENES, type Upgrade } from '@/game/game-data';
 import { useIdleGame } from '@/hooks/use-idle-game';
 
-type BuildChipProps = {
+type UpgradeSlotProps = {
   upgrade: Upgrade;
   index: number;
   owned: number;
@@ -27,48 +19,28 @@ type BuildChipProps = {
   onPress: () => void;
 };
 
-function BuildChip({ upgrade, index, owned, selected, accent, onPress }: BuildChipProps) {
+function UpgradeSlot({ upgrade, index, owned, selected, accent, onPress }: UpgradeSlotProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Select ${upgrade.name}`}
       onPress={onPress}
       style={({ pressed }) => ({
-        width: 104,
-        minHeight: 78,
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        gap: 7,
-        borderRadius: 15,
-        paddingHorizontal: 10,
-        paddingVertical: 10,
-        backgroundColor: selected ? `${accent}2b` : '#12101f',
+        width: 43,
+        height: 43,
+        borderRadius: 13,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: selected ? `${accent}26` : '#0d0b17',
         borderWidth: selected ? 2 : 1,
-        borderColor: selected ? accent : '#ffffff1a',
-        transform: [{ scale: pressed ? 0.94 : 1 }],
+        borderColor: selected ? accent : '#ffffff1c',
+        transform: [{ scale: pressed ? 0.92 : 1 }],
       })}>
-      <View
-        style={{
-          width: 23,
-          height: 23,
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 7,
-          backgroundColor: selected ? accent : '#ffffff16',
-        }}>
-        <Text style={{ color: selected ? '#12101f' : '#b7afc3', fontSize: 9, fontWeight: '900' }}>
-          {String(index + 1).padStart(2, '0')}
-        </Text>
-      </View>
-      <Text
-        numberOfLines={2}
-        style={{ color: selected ? '#fff' : '#d5cedf', fontSize: 10, fontWeight: '900', lineHeight: 12 }}>
-        {upgrade.name.toUpperCase()}
+      <Text style={{ color: selected ? accent : '#d4cede', fontSize: 11, fontWeight: '900' }}>
+        {String(index + 1).padStart(2, '0')}
       </Text>
-      <Text
-        numberOfLines={1}
-        style={{ color: selected ? accent : '#8d879e', fontSize: 8, fontWeight: '900', letterSpacing: 0.7 }}>
-        {owned > 0 ? `LV ${owned}` : 'BUILD'}
+      <Text style={{ color: selected ? '#fff' : '#777182', fontSize: 7, fontWeight: '900', marginTop: 2 }}>
+        {owned > 0 ? `LV${owned}` : 'NEW'}
       </Text>
     </Pressable>
   );
@@ -76,37 +48,39 @@ function BuildChip({ upgrade, index, owned, selected, accent, onPress }: BuildCh
 
 export default function GameScreen() {
   const insets = useSafeAreaInsets();
-  const { height: screenHeight } = useWindowDimensions();
   const { test } = useLocalSearchParams<{ test?: string }>();
   const isTestMode = test === '1';
   const game = useIdleGame();
   const scene = SCENES[game.sceneIndex];
   const progress = getSceneProgress(game.lifetimeCash, game.sceneIndex);
+  const revealPoints = getRevealPoints(scene);
   const [selectedUpgradeId, setSelectedUpgradeId] = useState(scene.upgrades[0].id);
   const [floatingTap, setFloatingTap] = useState(false);
   const [lastTapEarned, setLastTapEarned] = useState(game.tapValue);
   const [buildFlash, setBuildFlash] = useState(false);
   const [tapAnimation] = useState(() => new Animated.Value(0));
   const [buildAnimation] = useState(() => new Animated.Value(0));
-  const nextScene = SCENES[game.sceneIndex + 1];
-  const parkHeight = Math.max(330, Math.min(470, screenHeight * 0.46));
-  const revealPoints = getRevealPoints(scene);
 
   const selectedUpgrade =
     scene.upgrades.find((upgrade) => upgrade.id === selectedUpgradeId) ?? scene.upgrades[0];
   const selectedOwned = game.owned[selectedUpgrade.id] ?? 0;
   const selectedCost = getUpgradeCost(selectedUpgrade, selectedOwned);
-  const selectedUpgradeIndex = Math.max(0, scene.upgrades.findIndex((upgrade) => upgrade.id === selectedUpgrade.id));
+  const selectedUpgradeIndex = Math.max(
+    0,
+    scene.upgrades.findIndex((upgrade) => upgrade.id === selectedUpgrade.id),
+  );
   const canBuySelected = game.cash >= selectedCost;
+  const moneyNeededToBuy = Math.max(0, Math.ceil(selectedCost - game.cash));
   const moneyToNextScene = Math.max(0, scene.target - game.lifetimeCash);
 
   const moneyToNextReveal = useMemo(() => {
+    if (progress >= 1) return 0;
     const nextPoint = revealPoints.find((point) => point > progress + 0.001);
     const target =
       nextPoint === undefined
         ? scene.target
         : scene.startAt + (scene.target - scene.startAt) * nextPoint;
-    return Math.max(1, Math.ceil(target - game.lifetimeCash));
+    return Math.max(0, Math.ceil(target - game.lifetimeCash));
   }, [game.lifetimeCash, progress, revealPoints, scene.startAt, scene.target]);
 
   useEffect(() => {
@@ -114,7 +88,7 @@ export default function GameScreen() {
     tapAnimation.setValue(0);
     Animated.timing(tapAnimation, {
       toValue: 1,
-      duration: 520,
+      duration: 500,
       useNativeDriver: true,
     }).start(() => setFloatingTap(false));
   }, [floatingTap, tapAnimation]);
@@ -139,148 +113,85 @@ export default function GameScreen() {
     setBuildFlash(true);
     buildAnimation.setValue(0);
     Animated.sequence([
-      Animated.timing(buildAnimation, { toValue: 1, duration: 180, useNativeDriver: true }),
-      Animated.delay(720),
-      Animated.timing(buildAnimation, { toValue: 0, duration: 260, useNativeDriver: true }),
+      Animated.timing(buildAnimation, { toValue: 1, duration: 170, useNativeDriver: true }),
+      Animated.delay(650),
+      Animated.timing(buildAnimation, { toValue: 0, duration: 250, useNativeDriver: true }),
     ]).start(() => setBuildFlash(false));
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   return (
-    <LinearGradient colors={['#05040c', '#120c21', '#05040c']} style={{ flex: 1 }}>
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
+    <LinearGradient colors={['#03030a', '#10091b', '#03030a']} style={{ flex: 1 }}>
+      <View
+        style={{
           width: '100%',
-          maxWidth: 690,
-          minHeight: screenHeight,
+          maxWidth: 520,
+          flex: 1,
+          minHeight: 0,
           alignSelf: 'center',
-          paddingTop: insets.top + 8,
-          paddingBottom: insets.bottom + 10,
-          paddingHorizontal: 12,
-          gap: 10,
+          paddingTop: insets.top + 6,
+          paddingBottom: Math.max(insets.bottom, 6),
+          paddingHorizontal: 8,
+          gap: 7,
         }}>
-        <View
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View>
-            <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.7 }}>
-              NIGHTMARE PARK
-            </Text>
-            <Text style={{ color: scene.accent, fontSize: 9, fontWeight: '900', letterSpacing: 2 }}>
-              HORROR EMPIRE
-            </Text>
-          </View>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              backgroundColor: '#ffffff0c',
-              borderWidth: 1,
-              borderColor: '#ffffff1a',
-              paddingHorizontal: 10,
-              paddingVertical: 7,
-              borderRadius: 99,
-            }}>
-            <View
-              style={{
-                width: 18,
-                height: 18,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 6,
-                backgroundColor: scene.accent,
-              }}>
-              <Text style={{ color: '#120d19', fontSize: 8, fontWeight: '900' }}>
-                {String(game.sceneIndex + 1).padStart(2, '0')}
+        <View style={{ gap: 5 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View>
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: -0.6 }}>
+                NIGHTMARE PARK
+              </Text>
+              <Text style={{ color: scene.accent, fontSize: 7, fontWeight: '900', letterSpacing: 2 }}>
+                BUILD YOUR HORROR EMPIRE
               </Text>
             </View>
-            <Text style={{ color: '#d9d4e5', fontSize: 10, fontWeight: '900' }}>
-              {scene.name}
-            </Text>
-          </View>
-        </View>
-
-        <View
-          style={{
-            borderRadius: 22,
-            overflow: 'hidden',
-            borderWidth: 1,
-            borderColor: `${scene.accent}55`,
-            backgroundColor: '#151224',
-          }}>
-          <LinearGradient
-            colors={['#1d1930', '#100e1c']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={{ paddingHorizontal: 15, paddingVertical: 12, gap: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: '#9b93ae', fontSize: 9, fontWeight: '900', letterSpacing: 1.5 }}>
-                  FEAR FUNDS
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 16 }}>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={{ color: '#8f889a', fontSize: 7, fontWeight: '900', letterSpacing: 1 }}>
+                  FUNDS
                 </Text>
-                <Text
-                  selectable
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  style={{
-                    color: '#fff',
-                    fontSize: 32,
-                    fontWeight: '900',
-                    letterSpacing: -1.3,
-                    fontVariant: ['tabular-nums'],
-                  }}>
+                <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', fontVariant: ['tabular-nums'] }}>
                   {formatMoney(game.cash)}
                 </Text>
               </View>
-              <View style={{ alignItems: 'flex-end', paddingBottom: 3 }}>
-                <Text style={{ color: scene.accent, fontSize: 16, fontWeight: '900' }}>
-                  +{formatMoney(game.incomePerSecond)}
+              <View style={{ alignItems: 'flex-end', paddingBottom: 2 }}>
+                <Text style={{ color: scene.accent, fontSize: 12, fontWeight: '900' }}>
+                  +{formatMoney(game.incomePerSecond)}/s
                 </Text>
-                <Text style={{ color: '#827a92', fontSize: 9, fontWeight: '900', letterSpacing: 1 }}>
-                  PER SECOND
-                </Text>
+                <Text style={{ color: '#777082', fontSize: 7, fontWeight: '900' }}>INCOME</Text>
               </View>
             </View>
-            <View style={{ height: 6, backgroundColor: '#06050c', borderRadius: 99, overflow: 'hidden' }}>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flex: 1, height: 4, borderRadius: 99, overflow: 'hidden', backgroundColor: '#171320' }}>
               <View
                 style={{
                   height: '100%',
                   width: `${Math.max(1, progress * 100)}%`,
                   borderRadius: 99,
                   backgroundColor: scene.accent,
-                  boxShadow: `0 0 10px ${scene.accent}`,
+                  boxShadow: `0 0 8px ${scene.accent}`,
                 }}
               />
             </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-              <Text style={{ color: '#bab3c8', fontSize: 10, fontWeight: '800' }}>
-                PARK VALUE {formatMoney(game.lifetimeCash)}
-              </Text>
-              <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900' }}>
-                {nextScene
-                  ? `${formatMoney(moneyToNextScene)} TO ${nextScene.name.toUpperCase()}`
-                  : `${formatMoney(moneyToNextScene)} TO COMPLETE`}
-              </Text>
-            </View>
-          </LinearGradient>
+            <Text style={{ color: '#9f98aa', fontSize: 8, fontWeight: '900' }}>
+              {Math.floor(progress * 100)}%
+            </Text>
+          </View>
         </View>
 
-        <View style={{ minHeight: parkHeight }}>
+        <View style={{ flex: 1, minHeight: 0 }}>
           <PremiumParkScene
             sceneIndex={game.sceneIndex}
             progress={progress}
-            lifetimeCash={game.lifetimeCash}
             moneyToNextReveal={moneyToNextReveal}
             tapValue={game.tapValue}
             tapStreak={game.tapStreak}
             tapMultiplier={game.tapMultiplier}
             bonusVehicle={game.bonusVehicle}
-            height={parkHeight}
             onTap={handleTap}
             onCollectBonusVehicle={handleCollectBonusVehicle}
           />
+
           {floatingTap && (
             <Animated.View
               pointerEvents="none"
@@ -288,137 +199,139 @@ export default function GameScreen() {
                 position: 'absolute',
                 left: 0,
                 right: 0,
-                top: parkHeight * 0.27,
+                top: '44%',
                 alignItems: 'center',
-                opacity: tapAnimation.interpolate({ inputRange: [0, 0.7, 1], outputRange: [1, 1, 0] }),
+                opacity: tapAnimation.interpolate({ inputRange: [0, 0.72, 1], outputRange: [1, 1, 0] }),
                 transform: [
-                  { translateY: tapAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, -56] }) },
+                  { translateY: tapAnimation.interpolate({ inputRange: [0, 1], outputRange: [0, -45] }) },
                   { scale: tapAnimation.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.8, 1.15, 1] }) },
                 ],
               }}>
-              <Text
-                style={{
-                  color: scene.accent,
-                  fontSize: 30,
-                  fontWeight: '900',
-                  textShadowColor: '#000',
-                  textShadowRadius: 10,
-                }}>
+              <Text style={{ color: scene.accent, fontSize: 25, fontWeight: '900', textShadowColor: '#000', textShadowRadius: 9 }}>
                 +{formatMoney(lastTapEarned)}
               </Text>
             </Animated.View>
           )}
+
           {buildFlash && (
             <Animated.View
               pointerEvents="none"
               style={{
                 position: 'absolute',
-                left: 18,
-                right: 18,
-                bottom: 21,
+                left: 20,
+                right: 20,
+                bottom: 62,
                 alignItems: 'center',
                 opacity: buildAnimation,
-                transform: [
-                  {
-                    translateY: buildAnimation.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }),
-                  },
-                  {
-                    scale: buildAnimation.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }),
-                  },
-                ],
+                transform: [{ translateY: buildAnimation.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
               }}>
               <View
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 7,
-                  backgroundColor: '#0b0916e8',
                   borderRadius: 99,
                   borderWidth: 1,
                   borderColor: scene.accent,
+                  backgroundColor: '#070812ee',
                   paddingHorizontal: 13,
-                  paddingVertical: 8,
+                  paddingVertical: 7,
                 }}>
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 7,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: scene.accent,
-                  }}>
-                  <Text style={{ color: '#130f1c', fontSize: 9, fontWeight: '900' }}>
-                    {String(selectedUpgradeIndex + 1).padStart(2, '0')}
-                  </Text>
-                </View>
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>
-                  {selectedUpgrade.name} upgraded
-                </Text>
-                <Text style={{ color: scene.accent, fontSize: 11, fontWeight: '900' }}>
-                  +{formatMoney(selectedUpgrade.income)}/s
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>
+                  {selectedUpgrade.name} · +{formatMoney(selectedUpgrade.income)}/s
                 </Text>
               </View>
             </Animated.View>
           )}
+
+          {game.offlineEarnings > 0 && (
+            <Pressable
+              onPress={game.dismissOfflineEarnings}
+              style={{
+                position: 'absolute',
+                top: 72,
+                left: 12,
+                right: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderRadius: 13,
+                borderWidth: 1,
+                borderColor: `${scene.accent}88`,
+                backgroundColor: '#080914ee',
+                paddingHorizontal: 10,
+                paddingVertical: 8,
+              }}>
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', flex: 1 }}>
+                While away: +{formatMoney(game.offlineEarnings)}
+              </Text>
+              <Text style={{ color: scene.accent, fontSize: 8, fontWeight: '900' }}>COLLECT</Text>
+            </Pressable>
+          )}
         </View>
+
+        {isTestMode && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 5 }}>
+            {[
+              ['NEXT BUILD', () => game.addTestFunds(Math.max(1, moneyToNextReveal))],
+              ['NEXT SCENE', () => game.addTestFunds(Math.max(1, moneyToNextScene))],
+              ['+£100K', () => game.addTestFunds(100_000)],
+              ['BONUS', game.spawnBonusVehicle],
+              ['RESET', game.resetGame],
+            ].map(([label, action]) => (
+              <Pressable
+                key={label as string}
+                onPress={action as () => void}
+                style={{ borderRadius: 99, backgroundColor: '#2a172a', paddingHorizontal: 9, paddingVertical: 5 }}>
+                <Text style={{ color: '#ffb4d2', fontSize: 8, fontWeight: '900' }}>{label as string}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
 
         <View
           style={{
-            backgroundColor: '#12101f',
+            borderRadius: 20,
             borderWidth: 1,
-            borderColor: '#ffffff1c',
-            borderRadius: 24,
-            padding: 11,
-            gap: 10,
-            boxShadow: '0 -8px 26px rgba(0,0,0,0.18)',
+            borderColor: '#ffffff1f',
+            backgroundColor: '#100d1a',
+            padding: 8,
+            gap: 7,
+            boxShadow: '0 -8px 24px rgba(0,0,0,0.28)',
           }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>Build {scene.name}</Text>
-              <Text style={{ color: '#827a92', fontSize: 10 }}>Earn, construct, and watch the whole location evolve.</Text>
-            </View>
-            <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900' }}>SCENE {game.sceneIndex + 1}</Text>
-          </View>
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {scene.upgrades.map((upgrade, index) => (
-              <BuildChip
-                key={upgrade.id}
-                upgrade={upgrade}
-                index={index}
-                owned={game.owned[upgrade.id] ?? 0}
-                selected={selectedUpgrade.id === upgrade.id}
-                accent={scene.accent}
-                onPress={() => setSelectedUpgradeId(upgrade.id)}
-              />
-            ))}
-          </ScrollView>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View
-              style={{
-                width: 44,
-                height: 44,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 14,
-                backgroundColor: `${scene.accent}1c`,
-              }}>
-              <Text style={{ color: scene.accent, fontSize: 12, fontWeight: '900' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ gap: 6 }}>
+              {scene.upgrades.map((upgrade, index) => (
+                <UpgradeSlot
+                  key={upgrade.id}
+                  upgrade={upgrade}
+                  index={index}
+                  owned={game.owned[upgrade.id] ?? 0}
+                  selected={selectedUpgrade.id === upgrade.id}
+                  accent={scene.accent}
+                  onPress={() => setSelectedUpgradeId(upgrade.id)}
+                />
+              ))}
+            </ScrollView>
+            <View style={{ minWidth: 47, alignItems: 'flex-end' }}>
+              <Text style={{ color: scene.accent, fontSize: 8, fontWeight: '900' }}>SLOT</Text>
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>
                 {String(selectedUpgradeIndex + 1).padStart(2, '0')}
               </Text>
             </View>
-            <View style={{ flex: 1, gap: 1 }}>
-              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text numberOfLines={1} style={{ color: '#fff', fontSize: 13, fontWeight: '900', flex: 1 }}>
                   {selectedUpgrade.name}
                 </Text>
                 {selectedOwned > 0 && (
-                  <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900' }}>LV {selectedOwned}</Text>
+                  <Text style={{ color: scene.accent, fontSize: 9, fontWeight: '900' }}>LV {selectedOwned}</Text>
                 )}
               </View>
-              <Text numberOfLines={1} style={{ color: '#91899f', fontSize: 10 }}>
+              <Text numberOfLines={1} style={{ color: '#8f8999', fontSize: 9, marginTop: 2 }}>
                 +{formatMoney(selectedUpgrade.income)}/sec · {selectedUpgrade.description}
               </Text>
             </View>
@@ -430,72 +343,22 @@ export default function GameScreen() {
             disabled={!canBuySelected}
             onPress={handleBuy}
             style={({ pressed }) => ({
+              minHeight: 42,
+              borderRadius: 13,
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: 46,
-              borderRadius: 15,
-              backgroundColor: canBuySelected ? scene.accent : '#292536',
+              backgroundColor: canBuySelected ? scene.accent : '#292533',
               opacity: pressed ? 0.82 : 1,
               transform: [{ scale: pressed ? 0.985 : 1 }],
             })}>
-            <Text style={{ color: canBuySelected ? '#130f1c' : '#777082', fontWeight: '900', fontSize: 14 }}>
-              {canBuySelected ? `BUILD FOR ${formatMoney(selectedCost)}` : `NEED ${formatMoney(selectedCost)}`}
+            <Text style={{ color: canBuySelected ? '#100c17' : '#8a8491', fontSize: 13, fontWeight: '900' }}>
+              {canBuySelected
+                ? `BUILD · ${formatMoney(selectedCost)}`
+                : `${formatMoney(moneyNeededToBuy)} MORE TO BUILD`}
             </Text>
           </Pressable>
         </View>
-
-        {game.offlineEarnings > 0 && (
-          <Pressable
-            onPress={game.dismissOfflineEarnings}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              borderWidth: 1,
-              borderColor: `${scene.accent}66`,
-              backgroundColor: `${scene.accent}18`,
-              borderRadius: 16,
-              padding: 11,
-            }}>
-            <View
-              style={{
-                width: 28,
-                height: 28,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 10,
-                backgroundColor: `${scene.accent}22`,
-                borderWidth: 1,
-                borderColor: `${scene.accent}66`,
-              }}>
-              <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900' }}>AFK</Text>
-            </View>
-            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800', flex: 1 }}>
-              The park earned {formatMoney(game.offlineEarnings)} while you were away.
-            </Text>
-            <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900' }}>COLLECT</Text>
-          </Pressable>
-        )}
-
-        {isTestMode && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, justifyContent: 'center' }}>
-            {[
-              ['NEXT OBJECT', () => game.addTestFunds(moneyToNextReveal)],
-              ['NEXT SCENE', () => game.addTestFunds(Math.max(1, moneyToNextScene))],
-              ['+£100K', () => game.addTestFunds(100_000)],
-              ['BONUS VAN', game.spawnBonusVehicle],
-              ['RESET', game.resetGame],
-            ].map(([label, action]) => (
-              <Pressable
-                key={label as string}
-                onPress={action as () => void}
-                style={{ backgroundColor: '#3a2136', borderRadius: 99, paddingHorizontal: 11, paddingVertical: 7 }}>
-                <Text style={{ color: '#ffb1ca', fontSize: 10, fontWeight: '900' }}>{label as string}</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+      </View>
 
       <Modal
         transparent
@@ -505,51 +368,36 @@ export default function GameScreen() {
         <View
           style={{
             flex: 1,
-            backgroundColor: '#05040be8',
+            backgroundColor: '#03030ae8',
             alignItems: 'center',
             justifyContent: 'center',
             padding: 24,
           }}>
           <LinearGradient
-            colors={['#2e2046', '#100d1b']}
+            colors={['#2a1b3f', '#0b0913']}
             style={{
               width: '100%',
-              maxWidth: 420,
-              borderRadius: 30,
-              padding: 25,
+              maxWidth: 390,
+              borderRadius: 28,
+              padding: 24,
               alignItems: 'center',
-              gap: 13,
+              gap: 12,
               borderWidth: 2,
               borderColor: scene.accent,
             }}>
-            <View
-              style={{
-                width: 58,
-                height: 58,
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: `${scene.accent}20`,
-                borderWidth: 1,
-                borderColor: `${scene.accent}99`,
-              }}>
-              <Text style={{ color: scene.accent, fontSize: 18, fontWeight: '900', letterSpacing: 1 }}>
-                OPEN
-              </Text>
-            </View>
-            <Text style={{ color: scene.accent, fontSize: 11, fontWeight: '900', letterSpacing: 2 }}>
+            <Text style={{ color: scene.accent, fontSize: 10, fontWeight: '900', letterSpacing: 2.5 }}>
               NEW LOCATION
             </Text>
-            <Text style={{ color: '#fff', fontSize: 29, fontWeight: '900', textAlign: 'center' }}>
+            <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', textAlign: 'center' }}>
               {scene.name}
             </Text>
-            <Text style={{ color: '#b4adbf', fontSize: 14, lineHeight: 21, textAlign: 'center' }}>
+            <Text style={{ color: '#b7b0bf', fontSize: 13, lineHeight: 19, textAlign: 'center' }}>
               {scene.strapline}
             </Text>
             <Pressable
               onPress={game.dismissSceneUnlock}
-              style={{ backgroundColor: scene.accent, paddingHorizontal: 25, paddingVertical: 13, borderRadius: 99 }}>
-              <Text style={{ color: '#140f1d', fontWeight: '900' }}>OPEN THE GATES</Text>
+              style={{ backgroundColor: scene.accent, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 99 }}>
+              <Text style={{ color: '#100c17', fontWeight: '900' }}>OPEN THE GATES</Text>
             </Pressable>
           </LinearGradient>
         </View>
